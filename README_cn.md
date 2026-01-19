@@ -16,7 +16,16 @@ MiniHexa 配备了 AI 功能，包括计算机视觉、语音交互和大语言�
 
 ### 幻尔科技官方
 - **官方网站**: [https://www.hiwonder.com/](https://www.hiwonder.com/)
+- **在线教程**: [https://wiki.hiwonder.com/projects/miniHexa/en/latest/](https://wiki.hiwonder.com/projects/miniHexa/en/latest/)
 - **技术支持**: support@hiwonder.com
+
+### 视频演示
+
+- [MiniHexa 产品介绍](https://www.youtube.com/watch?v=BYNRlQRvBf4)
+- [六足机器人 miniHexa 超声波避障演示](https://www.youtube.com/shorts/Ahp4gRtIWlY)
+- [六足机器人 miniHexa 智能传感器探索](https://www.youtube.com/shorts/JSn-nrMnQPY)
+- [六足机器人 miniHexa PC 上位机控制](https://www.youtube.com/shorts/OPfjU2Akzv8)
+- [认识 miniHexa - 智能有趣的入门级六足机器人](https://www.youtube.com/shorts/dciMLGKGKoI)
 
 ## 主要功能
 
