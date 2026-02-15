@@ -38,8 +38,7 @@ void HW_Board::begin() {
   pinMode(button_pin, INPUT);  
   pinMode(32, OUTPUT);  
 
-  ledcSetup(LEDC_CHANNEL_0, LEDC_BASE_FREQ, LEDC_TIMER_BIT); // 5kHz 频率, 8位分辨率
-  ledcAttachPin(BUZZER_PIN, LEDC_CHANNEL_0);
+  ledcAttach(BUZZER_PIN, LEDC_BASE_FREQ, LEDC_TIMER_BIT);
 
   buzzer_timer = xTimerCreate("buzzer_timer", 
                     pdMS_TO_TICKS(200), 
@@ -87,13 +86,11 @@ void HW_Board::begin() {
 
   qmi.configAccelerometer(SensorQMI8658::ACC_RANGE_2G, 
                           SensorQMI8658::ACC_ODR_1000Hz, 
-                          SensorQMI8658::LPF_MODE_0,
-                          true);
+                          SensorQMI8658::LPF_MODE_0);
 
   qmi.configGyroscope(SensorQMI8658::GYR_RANGE_512DPS,
                       SensorQMI8658::GYR_ODR_448_4Hz,
-                      SensorQMI8658::LPF_MODE_1,
-                      true);
+                      SensorQMI8658::LPF_MODE_1);
   /* In 6DOF mode (accelerometer and gyroscope are both enabled),
   *
   *the output data rate is derived from the nature frequency of gyroscope

@@ -19,7 +19,7 @@
 #define BAT_READ_REG    0
 #define DEFAULT_VREF    1100              // 默认1.1V的参考电压
 #define NO_OF_SAMPLES   64                // ADC采样次数
-#define ADC_WIDTH       ADC_WIDTH_12Bit   // ADC 12位宽度
+#define ADC_WIDTH       ADC_WIDTH_BIT_12   // ADC 12位宽度
 #define ADC_ATTEN       ADC_ATTEN_DB_11   // 6dB衰减器
 #define ADC_PIN         ADC1_CHANNEL_5    // ADC引脚
 #define WINDOW_SIZE     8  // 滤波窗口大小

@@ -79,7 +79,7 @@ RecData_t BLEServerManager::read_data(String data)
 
 void BLEServerManager::MyCallbacks::onWrite(BLECharacteristic *pCharacteristic)
 {
-  std::string value = pCharacteristic->getValue();
+  String value = pCharacteristic->getValue();
   if (value.length() > 0) {
     ble_buf += value;  // 将接收到的数据追加到缓冲区
     size_t endPos = ble_buf.find('&');
@@ -144,7 +144,7 @@ void BLEServerManager::send_message(uint16_t value_1, uint16_t value_2)
   std::string message = "$" + std::to_string(value_1) + "$"+ std::to_string(value_2) +"$";
   if (!message.empty())
   {
-    pTxCharacteristic->setValue(message);
+    pTxCharacteristic->setValue(String(message.c_str()));
     pTxCharacteristic->notify();
   }
 }
