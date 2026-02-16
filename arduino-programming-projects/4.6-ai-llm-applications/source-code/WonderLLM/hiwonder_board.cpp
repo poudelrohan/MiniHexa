@@ -214,16 +214,16 @@ void HW_Board::bat_voltage_update() {
     raw = adc1_get_raw(ADC_PIN);
     samples_voltage = esp_adc_cal_raw_to_voltage(raw, adc_chars);
     samples_voltage = ((R21 + R22) / R22) * samples_voltage;
-    // 插入到滑动窗口
+    // Insert into sliding window
     voltage_buffer[voltage_index] = samples_voltage;
     voltage_index = (voltage_index + 1) % WINDOW_SIZE;
 
-    // 计算滑动平均
+    // Calculate sliding average
     for (int i = 0; i < WINDOW_SIZE; i++) {
         sum += voltage_buffer[i];
     }
 
-    bat = sum / WINDOW_SIZE;  // 平均电压
+    bat = sum / WINDOW_SIZE;  // Average voltage
 
     if(voltage_buffer[WINDOW_SIZE - 1] != 0) {
       bat_voltage = bat;

@@ -53,8 +53,8 @@ private:
   // RecData_t readVariable;
   class MyCallbacks : public BLECharacteristicCallbacks {
   private:
-    BLEServerManager* manager;  // 保存对 BLEServerManager 的引用
-    std::string ble_buf;
+    BLEServerManager* manager;  // Reference to BLEServerManager
+    String ble_buf;
   public:
     MyCallbacks(BLEServerManager* mgr) : manager(mgr) {}
     void onWrite(BLECharacteristic *pCharacteristic) override;
@@ -62,7 +62,7 @@ private:
 
   class MyServerCallbacks : public BLEServerCallbacks {
   private:
-    BLEServerManager* manager;  // 保存对 BLEServerManager 的引用
+    BLEServerManager* manager;  // Reference to BLEServerManager
   public:
     MyServerCallbacks(BLEServerManager* mgr) : manager(mgr) {}
     void onConnect(BLEServer* pServer) override;

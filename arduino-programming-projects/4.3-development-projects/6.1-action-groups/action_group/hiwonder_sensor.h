@@ -3,9 +3,9 @@
 
 #include "global.h"
 
-#define ULTRASOUND_ADDR                     0x77  /* 超声波模块I2C从机地址 */
-#define DISTANCE_REG                        0     /* 距离低8位，单位mm */
-#define RGB_WORK_MODE_REG                   2     /*  RGB灯模式设置寄存器 */
+#define ULTRASOUND_ADDR                     0x77  /* Ultrasonic module I2C slave address */
+#define DISTANCE_REG                        0     /* Distance low byte, unit: mm */
+#define RGB_WORK_MODE_REG                   2     /* RGB LED mode setting register */
 #define RGB_WORK_SOLID_MODE                 0
 #define RGB_WORK_BREATHING_MODE             1
 #define SOLID_RGB_SET_REG                   3
@@ -64,12 +64,12 @@ class HW_Sensor{
   public:
     void begin();
     /*  */
-    void set_ultrasound_rgb(uint8_t mode, uint8_t *rgb1, uint8_t *rgb2); //r1，g1，b1表示右边rgb灯的呼吸周期，20表示2s一个周期
+    void set_ultrasound_rgb(uint8_t mode, uint8_t *rgb1, uint8_t *rgb2); // r1,g1,b1 = right RGB LED breathing period, 20 = 2s per cycle
     uint16_t _get_distance(void);
     uint16_t get_distance(void);
     uint16_t get_bat_voltage(void);
-    uint8_t get_touch_state(void);  /* 0-按下   1-松开 */
-    uint8_t get_ir1_state(void);    /* 0-有障碍 1-无 */
+    uint8_t get_touch_state(void);  /* 0 - pressed, 1 - released */
+    uint8_t get_ir1_state(void);    /* 0 - obstacle detected, 1 - clear */
     uint8_t get_ir2_state(void);
 
     Wonder_Echo asr;

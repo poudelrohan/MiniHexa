@@ -20,12 +20,12 @@ typedef enum {
 }RotationDirection;
 
 typedef struct {
-  float r;                      /* 圆半径 */
-  uint16_t steps_per_circle;    /* 每圈步数 */
-  uint16_t total_circles;       /* 总圈数 */
-  uint16_t current_step;        /* 当前步数（从0开始）*/
-  bool is_completed;            /* 是否已完成全部路径 */
-  RotationDirection direction;  /* 旋转方向 */
+  float r;                      /* Circle radius */
+  uint16_t steps_per_circle;    /* Steps per circle */
+  uint16_t total_circles;       /* Total circles */
+  uint16_t current_step;        /* Current step (from 0) */
+  bool is_completed;            /* Whether full path is completed */
+  RotationDirection direction;  /* Rotation direction */
 }CircularPath;
 
 #ifdef __cplusplus
@@ -38,7 +38,7 @@ class RobotJoint {
   public: 
     RobotJoint();
 
-    bool dir;                 /* dir = true 正转 dir = false 反转 */
+    bool dir;                 /* dir = true forward, dir = false reverse */
     int8_t offset_value;
     uint8_t id;
     uint16_t duty;
@@ -46,34 +46,34 @@ class RobotJoint {
     float angle;
 
     /**
-     * @brief 绑定舵机ID号
+     * @brief Bind servo ID
      * 
-     * @param  id -分配的舵机序号
+     * @param  id - assigned servo number
      */
     void attach_servo(uint8_t id);
     
     /**
-     * @brief 通过设置角度实现舵机控制
+     * @brief Control servo by setting angle
      * 
-     * @param  dir    -true 正转 
-     *                -false 反转
-     * @param  angle  -角度值
-     * @param  time   -运行时间
-     * @param  is_ops -是否直接控制舵机响应 
-     *                -true 舵机响应 
-     *                -false 舵机不响应
-     * @attention  默认绑定的19、20、21号舵机为180度舵机
+     * @param  dir    - true forward 
+     *                - false reverse
+     * @param  angle  - angle value
+     * @param  time   - execution time
+     * @param  is_ops - whether to directly control servo response 
+     *                - true servo responds 
+     *                - false servo does not respond
+     * @attention  Default bound servos 19, 20, 21 are 180-degree servos
      */
     void set_angle(bool dir, float angle, uint16_t time, bool is_ops);
 
     /**
-     * @brief 通过设置PWM脉宽实现舵机控制
+     * @brief Control servo by setting PWM pulse width
      * 
-     * @param  duty   -PWM脉宽
-     * @param  time   -运行时间
-     * @param  is_ops -是否直接控制舵机响应 
-     *                -true 舵机响应 
-     *                -false 舵机不响应
+     * @param  duty   - PWM pulse width
+     * @param  time   - execution time
+     * @param  is_ops - whether to directly control servo response 
+     *                - true servo responds 
+     *                - false servo does not respond
      */
     void set_duty(uint16_t duty, uint16_t time, bool is_ops);
 
@@ -96,74 +96,74 @@ class RobotLeg {
     
     Theta_t _result;
     
-    Vector_t offset;                                /* 读取到的舵机偏差值 */
-    Vector_t b_leg_start;                           /* 腿部起始端在机体坐标系下的坐标 */
-    Vector_t r_leg_end;                             /* 经过旋转变换的腿部末端坐标 */
-    Vector_t b_leg_end;                             /* 腿部末端在机体坐标系下的坐标 */
-    Vector_t omni_move_end_point;                   /* 全向运动下腿部末端目标落点位置 */  
-    Vector_t trajectory_point;                      /* 轨迹规划目标位置 */ 
-    Vector_t result;                                /* 姿态解算的坐标 */
-    Vector_t start_result;                          /* 初始化姿态解算的坐标 */
-    Vector_t amplitude;                             /* 腿部运动幅度 */
-    Vector_t last_point;                            /* 腿部末端上一次坐标 */    
-    Vector_t now_point;                             /* 腿部末端坐标 */
+    Vector_t offset;                                /* Read servo offset values */
+    Vector_t b_leg_start;                           /* Leg start position in body coordinate system */
+    Vector_t r_leg_end;                             /* Rotated leg end-point coordinates */
+    Vector_t b_leg_end;                             /* Leg end-point in body coordinate system */
+    Vector_t omni_move_end_point;                   /* Omnidirectional movement leg end target position */  
+    Vector_t trajectory_point;                      /* Trajectory planning target position */ 
+    Vector_t result;                                /* Pose calculation coordinates */
+    Vector_t start_result;                          /* Initial pose calculation coordinates */
+    Vector_t amplitude;                             /* Leg movement amplitude */
+    Vector_t last_point;                            /* Leg end-point previous coordinates */    
+    Vector_t now_point;                             /* Leg end-point coordinates */
     Vector_t trans_point;
     Vector_t begin_point = {7.0f, 0.0f, -4.0f};
     Vector_t start_point = {7.0f, 0.0f, -4.0f};
     Vector_t goal_point = {7.0f, 0.0f, -4.0f};
-    Vector_t verified_point = {9.0f, 0.0f, -2.0f};  /* 腿部偏差验证初始坐标点 */
+    Vector_t verified_point = {9.0f, 0.0f, -2.0f};  /* Leg offset verification initial coordinates */
 
     /**
-     * @brief 运动腿部到指定坐标点
+     * @brief Move leg to specified coordinates
      * 
-     * @param  point  -目标坐标
-     * @param  time   -运行时间
-     * @return true   -正在运行
-     * @return false  -未在运行
+     * @param  point  - target coordinates
+     * @param  time   - execution time
+     * @return true   - running
+     * @return false  - not running
      */
     bool move(Vector_t point, uint32_t time);
 
     /**
-     * @brief 获取当前坐标点
+     * @brief Get current coordinates
      * 
-     * @return Vector_t -当前坐标点
+     * @return Vector_t - current coordinates
      */
     Vector_t get_now_point(void);
 
     /**
-     * @brief 偏差设置
+     * @brief Set offset
      * 
-     * @param  x  -x轴偏差
-     * @param  y  -y轴偏差
-     * @param  z  -z轴偏差
+     * @param  x  - x-axis offset
+     * @param  y  - y-axis offset
+     * @param  z  - z-axis offset
      */
     void offset_set(float x, float y, float z);
 
     /**
-     * @brief 偏差读取
+     * @brief Read offset
      * 
-     * @return Vector_t -偏差
+     * @return Vector_t - offset
      */
     Vector_t offset_read(void);
 
     /**
-     * @brief 偏差下载
+     * @brief Download offset
      * 
-     * @return true   -下载成功
-     * @return false  -下载失败
+     * @return true   - download success
+     * @return false  - download failed
      */
     bool offset_download(void);
 
     /**
-     * @brief  偏差擦除
+     * @brief  Erase offset
      * 
-     * @return true   -擦除成功
-     * @return false  -擦除失败
+     * @return true   - erase success
+     * @return false  - erase failed
      */
     bool offset_erase(void);
 
     /**
-     * @brief  偏差校验
+     * @brief  Offset verification
      * 
      */
     void offset_verify(void);
@@ -199,83 +199,83 @@ class Robot {
     Act_State act_state = READ_FRAME_NUM;
 
     /**
-     * @brief 机体初始化
+     * @brief Body initialization
      * 
      */
     void begin(void);
     
     /**
-     * @brief 位置更新  默认每10ms更新一次
+     * @brief Position update, default every 10ms
      * 
      */
     void update(void);
 
     /**
-     * @brief 偏差校准姿态
+     * @brief Offset calibration posture
      * 
      */
     void calibrate_state(void);
 
     /**
-     * @brief 运动姿态
+     * @brief Motion posture
      * 
      */
     void crawl_state(void);
 
     /**
-     * @brief 机体移动
+     * @brief Body movement
      * 
-     * @param  _velocity    -机体x、y和绕z轴旋转速度 
-     * @param  _position    -相对于机体中心的x、y和z轴位置
-     * @param  _euler       -相对于机体中心的欧拉角
-     * @param  time         -运行时间
-     * @param  step_num     -步数
+     * @param  _velocity    - body x, y and z-axis rotation speed 
+     * @param  _position    - x, y, z position relative to body center
+     * @param  _euler       - Euler angles relative to body center
+     * @param  time         - execution time
+     * @param  step_num     - number of steps
      */
     void move(Velocity_t *_velocity, Vector_t *_position, Euler_t *_euler, uint32_t time = 1800, int step_num = -1);
 
     /**
-     * @brief 机体复位
+     * @brief Body reset
      * 
      */
     void reset(void);
 
     /**
-     * @brief 避障
+     * @brief Obstacle avoidance
      * 
-     * @param  dis  -测得的当前距离
+     * @param  dis  - measured current distance
      */
     void avoid(uint16_t dis);
 
     /**
-     * @brief 自平衡
+     * @brief Self-balancing
      * 
      */
     void balance(void);
 
     /**
-     * @brief 扭动动作
+     * @brief Twisting action
      * 
-     * @param  radius            -半径
-     * @param  circles           -圈数
-     * @param  steps_per_circle  -每圈采样点数
-     * @param  dir               -方向
+     * @param  radius            - radius
+     * @param  circles           - number of circles
+     * @param  steps_per_circle  - sample points per circle
+     * @param  dir               - direction
      */
     void twist(float radius, uint16_t circles, uint16_t steps_per_circle, RotationDirection dir);
 
     /**
-     * @brief 撒娇动作
+     * @brief Cute/playful action
      * 
      */
     void acting_cute(void);
 
     /**
-     * @brief 唤醒动作
+     * @brief Wake up action
      * 
      */
     void wake_up();
 
     /**
-     * @brief 唤醒奔跑动作
+     * @brief Wake up running action
      * 
      */
     void _wake_up();
@@ -284,50 +284,50 @@ class Robot {
     // void coor_action2();
 
     /**
-     * @brief 列出当前存在的动作组文件名称及文件大小(需要打开LOG)
+     * @brief List existing action group file names and sizes (requires LOG enabled)
      * 
      */
     void list_action_group_dir(void);  
 
     /**
-     * @brief 动作组复位
+     * @brief Action group reset
      * 
      */
     void action_group_stop(void);    
 
     /**
-     * @brief 动作组运行
+     * @brief Action group run
      * 
-     * @param  id -运行的动作组id号
+     * @param  id - action group ID to run
      */
     void action_group_run(uint8_t id);
 
     /**
-     * @brief 动作组下载
+     * @brief Download action group
      * 
-     * @param  id       -动作组id号
-     * @param  buf      -下载的动作组数据
-     * @param  length   -下载的动作组数据长度
-     * @return true     -下载成功
-     * @return false    -下载失败
+     * @param  id       - action group ID
+     * @param  buf      - action group data buffer
+     * @param  length   - action group data length
+     * @return true     - download success
+     * @return false    - download failed
      */
     bool action_group_download(uint8_t id, uint8_t *buf, size_t length);
 
     /**
-     * @brief 动作组擦除
+     * @brief Erase action group
      * 
-     * @param  id       -动作组id号
-     * @return true     -擦除成功
-     * @return false     -擦除失败
+     * @param  id       - action group ID
+     * @return true     - erase success
+     * @return false     - erase failed
      */
     bool action_group_erase(uint8_t id);
 
     /**
-     * @brief 多舵机控制
+     * @brief Multi-servo control
      * 
-     * @param  arg       -舵机参数结构体指针
-     * @param  servo_num -舵机数量
-     * @param  time      -运行时间
+     * @param  arg       - servo parameter struct pointer
+     * @param  servo_num - number of servos
+     * @param  time      - execution time
      */
     void multi_servo_control(ServoArg_t* arg, uint16_t servo_num, uint16_t time);
     
@@ -356,19 +356,19 @@ class Robot {
     TimerHandle_t event;
 
     /**
-     * @brief 移动落点坐标计算
+     * @brief Calculate movement landing point coordinates
      * 
      */
     void cal_omni_move_end_point(void);
 
     /**
-     * @brief  圆圈轨迹点计算
+     * @brief Calculate circle trajectory point
      * 
-     * @param  path   -轨迹点结构体指针
-     * @param  x      -圆心x坐标
-     * @param  y      -圆心y坐标
-     * @return true   -运动完成
-     * @return false  -运动未完成
+     * @param  path   - trajectory point struct pointer
+     * @param  x      - circle center x coordinate
+     * @param  y      - circle center y coordinate
+     * @return true   - motion complete
+     * @return false  - motion not complete
      */
     bool next_circular_point(CircularPath* path, float* x, float* y);
 };

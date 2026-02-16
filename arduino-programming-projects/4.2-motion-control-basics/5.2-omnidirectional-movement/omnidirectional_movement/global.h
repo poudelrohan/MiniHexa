@@ -5,17 +5,17 @@
 
 #include "Arduino.h"
 
-/* 通信引脚 */
+/* Communication pins */
 #define RXD2                                  16
 #define TXD2                                  17 
 #define SDA                                   22
 #define SCL                                   23
 
-/* 宏函数 获得A的低八位 */
+/* Macro function: get the low byte of A */
 #define GET_LOW_BYTE(A) ((uint8_t)(A))
-/* 宏函数 获得A的高八位 */
+/* Macro function: get the high byte of A */
 #define GET_HIGH_BYTE(A) ((uint8_t)((A) >> 8))
-/* 宏函数 将高低八位合成为十六位 */
+/* Macro function: combine high and low bytes into 16-bit */
 #define BYTE_TO_HW(A, B) ((((uint16_t)(A)) << 8) | (uint8_t)(B))
 
 #define LIMIT(x, min, max) (((x) >= (max)) ? (max) : (((x) <= (min)) ? (min) : (x)))

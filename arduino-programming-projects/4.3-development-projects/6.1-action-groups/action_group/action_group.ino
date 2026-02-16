@@ -10,12 +10,12 @@ uint8_t write_data[2][60] = {{0,2,1,18,200,0,1,173,6,2,58,4,3,69,2,4,127,6,5,205
 void setup() {
   Serial.begin(115200);
   minihexa.begin();
-  /*列出动作组文件*/
+  /* List action group files */
   minihexa.list_action_group_dir();
-  /* 下载动作组 */
+  /* Download action groups */
   minihexa.action_group_download(0, write_data[0], 60);
   minihexa.action_group_download(0, write_data[1], 60);
-  /* 运行动作组 */
+  /* Run action group */
   minihexa.action_group_run(0);
 }
 void loop() {

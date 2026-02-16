@@ -7,16 +7,16 @@ static QueueHandle_t xQueueIICData = NULL;
 
 void setup() {
   delay(1000);
-  /* 创建图像传输队列 */
+  /* Create image transfer queue */
   xQueueAIFrame = xQueueCreate(2, sizeof(camera_fb_t *)); 
-  /* 创建IIC数据传输队列 */
+  /* Create I2C data transfer queue */
   xQueueIICData = xQueueCreate(2, sizeof(color_data_t *) * SEND_CLOLOR_NUM);
 
-  /* 注册摄像头处理任务 */
+  /* Register camera processing task */
   register_camera(PIXFORMAT_RGB565, FRAMESIZE_QQVGA, 4, xQueueAIFrame);
-  /* 注册颜色识别任务 */
+  /* Register color detection task */
   register_color_detection(xQueueAIFrame, NULL, xQueueIICData, NULL, true);
-  /* 注册IIC数据传输任务 */
+  /* Register I2C data transfer task */
   register_iic_data_send(xQueueIICData, NULL);
 
 }

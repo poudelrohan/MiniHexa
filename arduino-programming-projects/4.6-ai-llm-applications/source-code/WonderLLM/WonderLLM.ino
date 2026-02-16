@@ -3,14 +3,14 @@
 #include <Wire.h>
 #include "WonderLLM.h"
 
-#define Move_stride_LowSpeed_1 70       //低速模式下前后运动单步平移步幅（单位：毫米）
-#define Move_stride_HighSpeed_1 85      //高速模式下前后运动单步平移步幅（单位：毫米）
-#define Move_stride_LowSpeed_2 65       //低速模式下左右运动单步平移步幅（单位：毫米）
-#define Move_stride_HighSpeed_2 75      //高速模式下左右运动单步平移步幅（单位：毫米）
-#define Move_stride_LowSpeed_3 90       //低速模式下斜向运动单步平移步幅（单位：毫米）
-#define Move_stride_HighSpeed_3 90      //高速模式下斜向运动单步平移步幅（单位：毫米）
-#define Rotation_angle_LowSpeed 24      //低速模式下单步旋转角度（单位：度）
-#define Rotation_angle_HighSpeed 45     //高速模式下单步旋转角度（单位：度）
+#define Move_stride_LowSpeed_1 70       // Low speed mode forward/backward single-step stride (unit: mm)
+#define Move_stride_HighSpeed_1 85      // High speed mode forward/backward single-step stride (unit: mm)
+#define Move_stride_LowSpeed_2 65       // Low speed mode left/right single-step stride (unit: mm)
+#define Move_stride_HighSpeed_2 75      // High speed mode left/right single-step stride (unit: mm)
+#define Move_stride_LowSpeed_3 90       // Low speed mode diagonal single-step stride (unit: mm)
+#define Move_stride_HighSpeed_3 90      // High speed mode diagonal single-step stride (unit: mm)
+#define Rotation_angle_LowSpeed 24      // Low speed mode single-step rotation angle (unit: degrees)
+#define Rotation_angle_HighSpeed 45     // High speed mode single-step rotation angle (unit: degrees)
 
 extern WonderLLM_Info WonderLLM_hiwonder;
 static char info[128];
@@ -33,15 +33,15 @@ void setup() {
   Serial.begin(115200);
   minihexa.begin();
   minihexa.sensor.set_ultrasound_rgb(RGB_WORK_SOLID_MODE, rgb1, rgb2);
-  WonderLLM_Init(); //初始化WonderLLM模块	
-  WonderLLM_hiwonder.Speed_Mode = 1; //初始化为低速运动模式
+  WonderLLM_Init(); // Initialize WonderLLM module	
+  WonderLLM_hiwonder.Speed_Mode = 1; // Initialize to low speed motion mode
 
-  //延时一段时间，确保模块已经上电，并完成配网（出现表情界面）
+  // Delay to ensure module is powered on and network configured (emoji face appears)
   delay(18000);
 
 }
 void loop() {
-  //获取WonderLLM数据
+  // Get WonderLLM data
   WonderLLM_Info_Get(&WonderLLM_hiwonder); 
   //Serial.printf("%d\r\n",WonderLLM_hiwonder.Speed_Mode);
   if(WonderLLM_hiwonder.Frame_mode != Frame_NULL){
@@ -59,87 +59,87 @@ void loop() {
                                                                                           WonderLLM_hiwonder.motion_target_RotationAngle);
           Serial.print(info);
           
-          /* 执行用户自定义运动控制API */
-          if(WonderLLM_hiwonder.motion_target_RotationAngle == -1 && WonderLLM_hiwonder.motion_target_distance == -1){ //不指定运动距离和运动角度
+          /* Execute user-defined motion control API */
+          if(WonderLLM_hiwonder.motion_target_RotationAngle == -1 && WonderLLM_hiwonder.motion_target_distance == -1){ // No specified distance or rotation angle
 
-              if(WonderLLM_hiwonder.motion_target_step == -1 && WonderLLM_hiwonder.motion_target_RunningTime == -1){ //不指定步数和运动时长，默认一直走不停下
+              if(WonderLLM_hiwonder.motion_target_step == -1 && WonderLLM_hiwonder.motion_target_RunningTime == -1){ // No specified steps or duration, keep walking indefinitely
                 sustain_move_flag = 1;
 
-              }else if(WonderLLM_hiwonder.motion_target_step != -1 && WonderLLM_hiwonder.motion_target_RunningTime == -1){ //指定运动步数但不指定运动时长
-                timer = 600 * WonderLLM_hiwonder.motion_target_step; //迈一步默认耗时600ms
+              }else if(WonderLLM_hiwonder.motion_target_step != -1 && WonderLLM_hiwonder.motion_target_RunningTime == -1){ // Specified steps but no duration
+                timer = 600 * WonderLLM_hiwonder.motion_target_step; // Default 600ms per step
 
-              }else if(WonderLLM_hiwonder.motion_target_step == -1 && WonderLLM_hiwonder.motion_target_RunningTime != -1){ //指定运动步数但不指定运动时长
+              }else if(WonderLLM_hiwonder.motion_target_step == -1 && WonderLLM_hiwonder.motion_target_RunningTime != -1){ // Specified steps but no duration
                 timer = WonderLLM_hiwonder.motion_target_RunningTime;
 
-              }else if(WonderLLM_hiwonder.motion_target_step != -1 && WonderLLM_hiwonder.motion_target_RunningTime != -1){ //同时指定运动步数和运动时长，两个参数相冲突，以运动时长为准
+              }else if(WonderLLM_hiwonder.motion_target_step != -1 && WonderLLM_hiwonder.motion_target_RunningTime != -1){ // Both steps and duration specified, conflicting params, duration takes priority
                 timer = WonderLLM_hiwonder.motion_target_RunningTime;
               }
 
-          }else if(WonderLLM_hiwonder.motion_target_RotationAngle != -1){ //指定运动角度
+          }else if(WonderLLM_hiwonder.motion_target_RotationAngle != -1){ // Specified rotation angle
 
-            //将运动角度换算为运动步数，按照 “不指定运动距离和运动角度” -- “指定运动步数但不指定运动时长” 处理
-            if(WonderLLM_hiwonder.Speed_Mode == 1){  //低速模式
+            // Convert rotation angle to steps, processed as "no distance/angle" -- "steps without duration"
+            if(WonderLLM_hiwonder.Speed_Mode == 1){  // Low speed mode
                 WonderLLM_hiwonder.motion_target_step = WonderLLM_hiwonder.motion_target_RotationAngle / Rotation_angle_LowSpeed;
 
-            }else if(WonderLLM_hiwonder.Speed_Mode == 2){ //高速模式
+            }else if(WonderLLM_hiwonder.Speed_Mode == 2){ // High speed mode
                 WonderLLM_hiwonder.motion_target_step = WonderLLM_hiwonder.motion_target_RotationAngle / Rotation_angle_HighSpeed;
                 
             }
             Serial.println(WonderLLM_hiwonder.motion_target_step);
 
-            timer = 600 * WonderLLM_hiwonder.motion_target_step; //迈一步默认耗时600ms
+            timer = 600 * WonderLLM_hiwonder.motion_target_step; // Default 600ms per step
 
-          }else if(WonderLLM_hiwonder.motion_target_distance != -1){ //指定运动距离
+          }else if(WonderLLM_hiwonder.motion_target_distance != -1){ // Specified movement distance
 
-            //将运动距离换算为运动步数，按照 “不指定运动距离和运动角度” -- “指定运动步数但不指定运动时长” 处理
-            if(WonderLLM_hiwonder.Speed_Mode == 1){  //低速模式
+            // Convert distance to steps, processed as "no distance/angle" -- "steps without duration"
+            if(WonderLLM_hiwonder.Speed_Mode == 1){  // Low speed mode
                 switch(WonderLLM_hiwonder.movement_direction){
-                  case 1: //前进
-                  case 5:{//后退
+                  case 1: // Forward
+                  case 5:{// Backward
                     WonderLLM_hiwonder.motion_target_step = WonderLLM_hiwonder.motion_target_distance / Move_stride_LowSpeed_1;
                     Serial.println(WonderLLM_hiwonder.motion_target_distance);
                     break;
                   }
-                  case 3: //右平移
-                  case 7:{//左平移
+                  case 3: // Right strafe
+                  case 7:{// Left strafe
                     WonderLLM_hiwonder.motion_target_step = WonderLLM_hiwonder.motion_target_distance / Move_stride_LowSpeed_2;
                     break;
                   } 
-                  case 2://右前
-                  case 4://右后
-                  case 6://左后
-                  case 8:{//左前
+                  case 2:// Front-right
+                  case 4:// Rear-right
+                  case 6:// Rear-left
+                  case 8:{// Front-left
                     WonderLLM_hiwonder.motion_target_step = WonderLLM_hiwonder.motion_target_distance / Move_stride_LowSpeed_3;
                     break;
                   }
                 }
                 
 
-            }else if(WonderLLM_hiwonder.Speed_Mode == 2){ //高速模式
+            }else if(WonderLLM_hiwonder.Speed_Mode == 2){ // High speed mode
                 switch(WonderLLM_hiwonder.movement_direction){
-                  case 1: //前进
-                  case 5:{//后退
+                  case 1: // Forward
+                  case 5:{// Backward
                     WonderLLM_hiwonder.motion_target_step = WonderLLM_hiwonder.motion_target_distance / Move_stride_HighSpeed_1;
                     break;
                   }
-                  case 3: //右平移
-                  case 7:{//左平移
+                  case 3: // Right strafe
+                  case 7:{// Left strafe
                     WonderLLM_hiwonder.motion_target_step = WonderLLM_hiwonder.motion_target_distance / Move_stride_HighSpeed_2;
                     break;
                   } 
-                  case 2://右前
-                  case 4://右后
-                  case 6://左后
-                  case 8:{//左前
+                  case 2:// Front-right
+                  case 4:// Rear-right
+                  case 6:// Rear-left
+                  case 8:{// Front-left
                     WonderLLM_hiwonder.motion_target_step = WonderLLM_hiwonder.motion_target_distance / Move_stride_HighSpeed_3;
                     break;
                   }
                 }
 
             }
-            timer = 600 * WonderLLM_hiwonder.motion_target_step; //迈一步默认耗时600ms
+            timer = 600 * WonderLLM_hiwonder.motion_target_step; // Default 600ms per step
 
-          }else{ //同时指定运动距离和运动角度,两个参数冲突，机器人不执行本轮指令
+          }else{ // Both distance and angle specified, conflicting params, robot skips this command
               WonderLLM_hiwonder.motion_target_step = 0;
               WonderLLM_hiwonder.motion_target_RunningTime = 0;
           }
@@ -147,47 +147,47 @@ void loop() {
 
 
           switch(WonderLLM_hiwonder.movement_direction){
-            case 1:{ //正前
+            case 1:{ // Forward
               Serial.println(36);
-              if(WonderLLM_hiwonder.motion_target_step == 0 && WonderLLM_hiwonder.motion_target_RunningTime == 0){ //当前指令为“机器人停止运动”
+              if(WonderLLM_hiwonder.motion_target_step == 0 && WonderLLM_hiwonder.motion_target_RunningTime == 0){ // Current command: robot stop
                 sustain_move_flag = 0;
               }
               vel = {0.0f,2.0f*WonderLLM_hiwonder.Speed_Mode,0.0f};              
               break;
             }
-            case 2:{ //右前
+            case 2:{ // Front-right
               vel = {2.0f*WonderLLM_hiwonder.Speed_Mode,2.0f*WonderLLM_hiwonder.Speed_Mode,0.0f};
               break;
             }
-            case 3:{ //正右
+            case 3:{ // Right
               vel = {2.0f*WonderLLM_hiwonder.Speed_Mode,0.0f,0.0f};
               break;
             }
-            case 4:{ //右后
+            case 4:{ // Rear-right
               vel = {2.0f*WonderLLM_hiwonder.Speed_Mode,-2.0f*WonderLLM_hiwonder.Speed_Mode,0.0f};
               break;
             }
-            case 5:{ //正后
+            case 5:{ // Backward
               vel = {0.0f,-2.0f*WonderLLM_hiwonder.Speed_Mode,0.0f};
               break;
             }
-            case 6:{ //左后
+            case 6:{ // Rear-left
               vel = {-2.0f*WonderLLM_hiwonder.Speed_Mode,-2.0f*WonderLLM_hiwonder.Speed_Mode,0.0f};
               break;
             }
-            case 7:{ //正左
+            case 7:{ // Left
               vel = {-2.0f*WonderLLM_hiwonder.Speed_Mode,0.0f,0.0f};
               break;
             }
-            case 8:{ //左前
+            case 8:{ // Front-left
               vel = {-2.0f*WonderLLM_hiwonder.Speed_Mode,2.0f*WonderLLM_hiwonder.Speed_Mode,0.0f};
               break;
             }
-            case 9:{ //原地左转
+            case 9:{ // Turn left in place
               vel = {0.0f,0.0f,2.0f*WonderLLM_hiwonder.Speed_Mode};
               break;
             }
-            case 10:{ //原地右转
+            case 10:{ // Turn right in place
               vel = {0.0f,0.0f,-2.0f*WonderLLM_hiwonder.Speed_Mode};
               break;
             }
@@ -205,7 +205,7 @@ void loop() {
             minihexa.move(&vel, &pos, &att);
           } 
           
-          //该类MCP工具阻塞式执行（block=true），执行完毕需调用基础系统指令action_finish回复WinderMind
+          // This MCP tool executes in blocking mode (block=true), call action_finish system command when done
           WonderLLM_Send_Action_Finish();							
           break;
         }
@@ -214,49 +214,49 @@ void loop() {
           sprintf(info,"Frame_BaryCenterMove:direction:%d\r\n",WonderLLM_hiwonder.BaryCenter_direction);
           Serial.print(info);
           
-          /* 执行用户自定义运动控制API */
+          /* Execute user-defined motion control API */
           switch(WonderLLM_hiwonder.BaryCenter_direction){
-            case 1:{ //正前 
+            case 1:{ // Forward 
               pos = {0.0f,3.0f,0.0f};
               break;
             }
-            case 2:{ //右前
+            case 2:{ // Front-right
               pos = {3.0f,3.0f,0.0f};
               break;
             }
-            case 3:{ //正右
+            case 3:{ // Right
               pos = {3.0f,0.0f,0.0f};
               break;
             }
-            case 4:{ //右后
+            case 4:{ // Rear-right
               pos = {3.0f,-3.0f,0.0f};
               break;
             }
-            case 5:{ //正后
+            case 5:{ // Backward
               pos = {0.0f,-3.0f,0.0f};
               break;
             }
-            case 6:{ //左后
+            case 6:{ // Rear-left
               pos = {-3.0f,-3.0f,0.0f};
               break;
             }
-            case 7:{ //正左
+            case 7:{ // Left
               pos = {-3.0f,0.0f,0.0f};
               break;
             }
-            case 8:{ //左前
+            case 8:{ // Front-left
               pos = {-3.0f,3.0f,0.0f};
               break;
             }
-            case 9:{ //正上
+            case 9:{ // Up
               pos = {0.0f,0.0f,3.0f};
               break;
             }
-            case 10:{ //正下
+            case 10:{ // Down
               pos = {0.0f,0.0f,-1.5f};
               break;
             }
-            case 11:{ //恢复初始姿态
+            case 11:{ // Restore initial posture
               pos = {0.0f,0.0f,0.0f};
               break;
             }
@@ -265,7 +265,7 @@ void loop() {
           att = {0.0f,0.0f,0.0f};
           minihexa.move(&vel, &pos, &att);
 
-          //该类MCP工具阻塞式执行（block=true），执行完毕需调用基础系统指令action_finish回复WinderMind
+          // This MCP tool executes in blocking mode (block=true), call action_finish system command when done
           WonderLLM_Send_Action_Finish();							
           break;
         }
@@ -274,29 +274,29 @@ void loop() {
           sprintf(info,"Frame_InclinationAngleMove:direction:%d\r\n",WonderLLM_hiwonder.incline_direction);
           Serial.print(info);
           
-          /* 执行用户自定义运动控制API */
+          /* Execute user-defined motion control API */
           switch(WonderLLM_hiwonder.incline_direction){
-            case 1:{ //前倾
+            case 1:{ // Tilt forward
               att = {12.0f,0.0f,0.0f};
               break;
             }
-            case 2:{ //后倾
+            case 2:{ // Tilt backward
               att = {-12.0f,0.0f,0.0f};
               break;
             }
-            case 3:{ //左倾
+            case 3:{ // Tilt left
               att = {0.0f,15.0f,0.0f};
               break;
             }
-            case 4:{ //右倾
+            case 4:{ // Tilt right
               att = {0.0f,-15.0f,0.0f};
               break;
             }
-            case 5:{ //左扭
+            case 5:{ // Twist left
               att = {0.0f,0.0f,-15.0f};
               break;
             }
-            case 6:{ //右扭
+            case 6:{ // Twist right
               att = {0.0f,-0.0f,15.0f};
               break;
             }
@@ -305,7 +305,7 @@ void loop() {
           pos = {0.0f,0.0f,0.0f};
           minihexa.move(&vel, &pos, &att);
 
-          //该类MCP工具阻塞式执行（block=true），执行完毕需调用基础系统指令action_finish回复WonderLLM
+          // This MCP tool executes in blocking mode (block=true), call action_finish system command when done
           WonderLLM_Send_Action_Finish();							
           break;
         }
@@ -321,7 +321,7 @@ void loop() {
         //   minihexa.reset();
         //   WonderLLM_hiwonder.running_mode = 1;
 
-        //   //该类MCP工具阻塞式执行（block=true），执行完毕需调用基础系统指令action_finish回复WonderLLM
+        //   // This MCP tool executes in blocking mode (block=true), call action_finish system command when done
         //   WonderLLM_Send_Action_Finish();							
         //   break;          
         // }
@@ -329,7 +329,7 @@ void loop() {
         case Frame_get_status_battery:{
           sprintf(info, "[\"battery\",\"%d\",\"mV\"]", minihexa.board.bat_voltage);
           
-          // //该类MCP工具需返回参数给WonderLLM（return=true），执行完毕需调用基础系统指令status按指定格式回传参数
+          // // This MCP tool returns params to WonderLLM (return=true), call status command with formatted params when done
           WonderLLM_Send_Status(info);
           break;
         }
@@ -339,14 +339,14 @@ void loop() {
           float euler_angle[3];
           minihexa.board.get_imu_euler(euler_angle);
           minihexa.read_position(BodyPosition);
-          if(fabs(euler_angle[0]) > 150.0f){  //机器人翻倒，横滚角绝对值大于150°
+          if(fabs(euler_angle[0]) > 150.0f){  // Robot fell over, roll angle absolute value > 150 degrees
             sprintf(info, "[\"Bodystate\",\"2\"]");
           }else{
             sprintf(info, "[\"Bodystate\",\"%d\"]", (BodyPosition[2] < 0) ? 1 : 0);
           }
           
           
-          // //该类MCP工具需返回参数给WonderLLM（return=true），执行完毕需调用基础系统指令status按指定格式回传参数
+          // // This MCP tool returns params to WonderLLM (return=true), call status command with formatted params when done
           WonderLLM_Send_Status(info);
           break;
         }
@@ -356,7 +356,7 @@ void loop() {
           minihexa.board.get_imu_euler(euler_angle);
           sprintf(info, "[[\"roll\",\"%.1f\"],[\"pitch\",\"%.1f\"]]",euler_angle[0],euler_angle[1]);
           
-          // //该类MCP工具需返回参数给WonderLLM（return=true），执行完毕需调用基础系统指令status按指定格式回传参数
+          // // This MCP tool returns params to WonderLLM (return=true), call status command with formatted params when done
           WonderLLM_Send_Status(info);
           break;
         }
@@ -364,7 +364,7 @@ void loop() {
         case Frame_get_status_Speed_mode:{
           sprintf(info, "[\"Speed_mode\",\"%d\"]", WonderLLM_hiwonder.Speed_Mode);
           
-          //该类MCP工具需返回参数给WonderLLM（return=true），执行完毕需调用基础系统指令status按指定格式回传参数
+          // This MCP tool returns params to WonderLLM (return=true), call status command with formatted params when done
           WonderLLM_Send_Status(info);						
           break;
         }
@@ -372,7 +372,7 @@ void loop() {
         case Frame_get_status_distance:{       
           sprintf(info, "[\"distance\",\"%d\",\"mm\"]", minihexa.sensor._get_distance());
       
-          //该类MCP工具需返回参数给WonderLLM（return=true），执行完毕需调用基础系统指令status按指定格式回传参数
+          // This MCP tool returns params to WonderLLM (return=true), call status command with formatted params when done
           WonderLLM_Send_Status(info);
           break;
         }
@@ -380,7 +380,7 @@ void loop() {
         case Frame_get_status_running_mode:{
           sprintf(info, "[\"running_mode\",\"%d\"]", WonderLLM_hiwonder.running_mode);
           
-          //该类MCP工具需返回参数给WonderLLM（return=true），执行完毕需调用基础系统指令status按指定格式回传参数
+          // This MCP tool returns params to WonderLLM (return=true), call status command with formatted params when done
           WonderLLM_Send_Status(info);						
           break;
         }
@@ -394,7 +394,7 @@ void loop() {
           att = {0.0f,0.0f,0.0f};
           minihexa.move(&vel, &pos, &att); 
 
-          //该类MCP工具阻塞式执行（block=true），执行完毕需调用基础系统指令action_finish回复WonderLLM
+          // This MCP tool executes in blocking mode (block=true), call action_finish system command when done
           WonderLLM_Send_Action_Finish();					
           break;
         }
@@ -405,10 +405,10 @@ void loop() {
                 WonderLLM_hiwonder.rgb_right[0],WonderLLM_hiwonder.rgb_right[1],WonderLLM_hiwonder.rgb_right[2]);
           Serial.print(info);
           
-          /* 执行用户自定义RGB灯控制API */
+          /* Execute user-defined RGB LED control API */
           minihexa.sensor.set_ultrasound_rgb(RGB_WORK_SOLID_MODE, WonderLLM_hiwonder.rgb_left, WonderLLM_hiwonder.rgb_right);
           
-          //该类MCP工具阻塞式执行（block=true），执行完毕需调用基础系统指令action_finish回复WonderLLM
+          // This MCP tool executes in blocking mode (block=true), call action_finish system command when done
           WonderLLM_Send_Action_Finish();
           break;
         }
@@ -417,7 +417,7 @@ void loop() {
           sprintf(info,"Frame_set_buzzer:%d\r\n",WonderLLM_hiwonder.buzzer_count);
           Serial.print(info);
           
-          /* 执行用户自定义蜂鸣器控制API */
+          /* Execute user-defined buzzer control API */
           for(int i = 0; i < WonderLLM_hiwonder.buzzer_count; i++){
             ledcWriteTone(LEDC_CHANNEL_0, 3000);
             delay(200);
@@ -425,7 +425,7 @@ void loop() {
             delay(500);
           }
           
-          //该类MCP工具阻塞式执行（block=true），执行完毕需调用基础系统指令action_finish回复WonderLLM
+          // This MCP tool executes in blocking mode (block=true), call action_finish system command when done
           WonderLLM_Send_Action_Finish();
           break;
         }
@@ -434,7 +434,7 @@ void loop() {
           sprintf(info,"Frame_set_speed_mode:%d\r\n",WonderLLM_hiwonder.Speed_Mode);
           Serial.print(info);
 
-          //该类MCP工具阻塞式执行（block=true），执行完毕需调用基础系统指令action_finish回复WonderLLM
+          // This MCP tool executes in blocking mode (block=true), call action_finish system command when done
           WonderLLM_Send_Action_Finish();
           break;						
         }
@@ -443,34 +443,34 @@ void loop() {
           sprintf(info,"Frame_ActionGroup:index%d time:%d\r\n",WonderLLM_hiwonder.ActionNum,WonderLLM_hiwonder.ExecuteActionNum);
           Serial.print(info);
 
-          //为防止动作组执行时间过长，WonderLLM长时间收不到回复误判为指令执行超时，因此先发送回复信息再执行动作组
-          //该类MCP工具阻塞式执行（block=true），执行完毕需调用基础系统指令action_finish回复WonderLLM
+          // Send reply before executing action group to prevent WonderLLM timeout
+          // This MCP tool executes in blocking mode (block=true), call action_finish system command when done
           WonderLLM_Send_Action_Finish();
 
           for(int i = 0; i < WonderLLM_hiwonder.ExecuteActionNum; i++){
             delay(1000);
             switch(WonderLLM_hiwonder.ActionNum){
-              case 3:{ //唤醒动作
+              case 3:{ // Wake up action
                 minihexa.wake_up();
                 break;
               }
-              case 4:{ //唤醒奔跑动作
+              case 4:{ // Wake up running action
                 minihexa._wake_up();
                 break;
               }
-              case 5:{ //撒娇动作
+              case 5:{ // Cute/playful action
                 minihexa.acting_cute();
                 break;
               }
-              case 6:   //越障动作
-              case 7:   //左腿战斗动作
-              case 8:   //右腿战斗动作
-              case 9:   //左脚向前踢球动作
-              case 10:  //左脚向右踢球动作
-              case 11:  //右脚向前踢球动作
-              case 12:  //右脚向左踢球动作 
-              case 13:  //推门动作
-              case 14:{ //挥手动作
+              case 6:   // Obstacle crossing action
+              case 7:   // Left leg fighting action
+              case 8:   // Right leg fighting action
+              case 9:   // Left foot forward kick action
+              case 10:  // Left foot right kick action
+              case 11:  // Right foot forward kick action
+              case 12:  // Right foot left kick action 
+              case 13:  // Push door action
+              case 14:{ // Wave hand action
                 minihexa.action_group_run(WonderLLM_hiwonder.ActionNum);
                 break;
               }                                                                                                                          
@@ -490,9 +490,9 @@ void loop() {
           //   WonderLLM_hiwonder.Vision_Result = 0;
           // }
 
-          //将IIC速率降至100W
-          /*执行非必要，如果其他IIC设备均支持400W速率通信，则可不必切换回
-            较低的100W，执行该函数是出于兼容其他低速IIC设备的考虑*/
+          // Lower I2C rate to 100kHz
+          /* Optional: if all I2C devices support 400kHz, no need to switch back
+             to 100kHz. This is for compatibility with slower I2C devices */
           IIC_Config_normal_Transmit();	
           break;
         }

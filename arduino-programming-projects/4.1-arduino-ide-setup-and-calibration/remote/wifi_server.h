@@ -29,7 +29,7 @@ public:
   RecData_t rec;
   TCPState tcp_state;
   
-  WiFiClient tcpClient;     // TCP 配置
+  WiFiClient tcpClient;     // TCP configuration
 
   WiFiServerManager();
   bool begin();
@@ -38,23 +38,23 @@ public:
   void parameters_reset();
 
 private:
-  IPAddress clientIP;       // 用于存储从广播中提取的TCP 客户端IP 地址
-  IPAddress selfIP;      // 用于存储自身IP 地址
+  IPAddress clientIP;       // Store TCP client IP extracted from broadcast
+  IPAddress selfIP;      // Store own IP address
   String clientAddress;
   const char* cClientAddress;  
 
   WiFiUDP udpClient;
   uint32_t tick_start = 0;
-  char incomingPacket[255];  // 缓存接收的广播数据   
+  char incomingPacket[255];  // Buffer for received broadcast data   
   bool udp_pairing_state; 
 
   
-  WiFiServer tcpServer;  // 创建TCP服务器，监听9023端口
-  bool tcp_connection_state;     // 连接标志状态
+  WiFiServer tcpServer;  // Create TCP server, listen on port 9023
+  bool tcp_connection_state;     // Connection flag state
 
   bool wifi_connection_state;
 
-  char rec_buffer[256]; // 假设每次读取的最大数据长度为 1024 字节
+  char rec_buffer[256]; // Max data length per read assumed 1024 bytes
 
   static RecData_t read_data(String data);
 };

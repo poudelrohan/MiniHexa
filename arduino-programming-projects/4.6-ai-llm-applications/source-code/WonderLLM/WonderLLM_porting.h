@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include "stdint.h"
 #include <Wire.h>
-// --- I2C & 协议定义 ---
+// --- I2C & Protocol Definitions ---
 #define WONDERLLM_SLAVE_ADDRESS 0x55//0x55
 #define I2C_TIMEOUT              10 // ms
 
@@ -24,43 +24,43 @@ extern const char tool_ActionGroup[];
 extern const char vision_prompt[];
 
 /**
- * @brief 系统延时功能接口
+ * @brief System delay interface
  */
 void delay_ms(int ms_num);
 
 /**
- * @brief 系统实时时间获取接口
+ * @brief System real-time clock interface
  */
 uint32_t Get_time_now(void);
 
 /**
- * @brief IIC扫描接口
- * @note  1.执行非必要，仅是出于程序健壮性的考虑
+ * @brief I2C scan interface
+ * @note  Optional, only for program robustness
  */
 bool Detect_WonderLLM();
 
 /**
- * @brief IIC速率配置接口
- * @note 涉及较长字符串（尤其是中文）的传输，必须使用调用本函数将IIC速率
- *       提升至400,000，否则WonderLLM将无法完整接收数据 
+ * @brief I2C rate configuration interface
+ * @note For long string transmission, I2C rate must be set to 400kHz
+ *       using this function, otherwise WonderLLM cannot receive complete data
  */
 void IIC_Config_MCP_Transmit(void);
 
 /**
- * @brief IIC速率配置接口
- * @note 1.执行非必要，如果其他IIC设备均支持400W速率通信，则可不必切换回
- *         较低的100W，执行该函数是出于兼容其他低速IIC设备的考虑
+ * @brief I2C rate configuration interface
+ * @note Optional: if all I2C devices support 400kHz, no need to switch back
+ *       to 100kHz. This is for compatibility with slower I2C devices
  */
 void IIC_Config_normal_Transmit(void);
 
 /**
- * @brief I2C底层数据接收接口
+ * @brief I2C low-level data receive interface
  */
 // int WonderLLM_Receive_Data(uint8_t* buffer, uint16_t size);
 int WonderLLM_Receive_Data(uint8_t* buffer, uint16_t size,bool stop_flag);
 
 /**
- * @brief I2C底层数据发送接口
+ * @brief I2C low-level data send interface
  */
 int WonderLLM_Send_Data(uint8_t* buffer, uint16_t len);
 

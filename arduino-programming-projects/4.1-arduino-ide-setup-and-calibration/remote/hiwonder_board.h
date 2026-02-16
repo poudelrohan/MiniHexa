@@ -12,17 +12,17 @@
 
 #define BUZZER_PIN      21
 #define LEDC_CHANNEL_0  0
-#define LEDC_TIMER_BIT  13                // 设置 13 位分辨率
-#define LEDC_BASE_FREQ  3000              // 设置 5kHz 的 PWM 基础频率
+#define LEDC_TIMER_BIT  13                // Set 13-bit resolution
+#define LEDC_BASE_FREQ  3000              // Set 5kHz PWM base frequency
 
 #define BAT_DEC_ADDR    0x46
 #define BAT_READ_REG    0
-#define DEFAULT_VREF    1100              // 默认1.1V的参考电压
-#define NO_OF_SAMPLES   64                // ADC采样次数
-#define ADC_WIDTH       ADC_WIDTH_BIT_12   // ADC 12位宽度
-#define ADC_ATTEN       ADC_ATTEN_DB_11   // 6dB衰减器
-#define ADC_PIN         ADC1_CHANNEL_5    // ADC引脚
-#define WINDOW_SIZE     8  // 滤波窗口大小
+#define DEFAULT_VREF    1100              // Default 1.1V reference voltage
+#define NO_OF_SAMPLES   64                // ADC sampling count
+#define ADC_WIDTH       ADC_WIDTH_BIT_12   // ADC 12-bit width
+#define ADC_ATTEN       ADC_ATTEN_DB_11   // 6dB attenuator
+#define ADC_PIN         ADC1_CHANNEL_5    // ADC pin
+#define WINDOW_SIZE     8  // Filter window size
 #define R21             100000
 #define R22             10000
 
@@ -33,55 +33,55 @@ class HW_Board {
     
     void begin(void);
     /**
-     * @brief 获取按键状态
+     * @brief Get button state
      * 
-     * @return true  -没按下
-     * @return false -按下
+     * @return true  - not pressed
+     * @return false - pressed
      */
     bool get_button_state(void);
 
     /**
-     * @brief 获取声音传感器数值
+     * @brief Get sound sensor value
      * 
      * @return int 
      */
     int get_sound_val(void);
 
     /**
-     * @brief 更新陀螺仪数据
+     * @brief Update IMU data
      * 
      */
     void _imu_update(void);
 
     /**
-     * @brief 更新陀螺仪数据
-     * @param  state    -true  打开
-     *                  -false 关闭
+     * @brief Update IMU data
+     * @param  state    - true  enable
+     *                  - false disable
      */
     void imu_update(bool state);
 
     /**
-     * @brief 获取陀螺仪加速度数据
+     * @brief Get IMU accelerometer data
      * 
      * @param  val
      */
     void get_imu_acc(float *val);
 
     /**
-     * @brief 获取陀螺仪角速度数据
+     * @brief Get IMU gyroscope data
      * 
      * @param  val
      */
     void get_imu_gyro(float *val);
 
     /**
-     * @brief 获取陀螺仪欧拉角数据
+     * @brief Get IMU Euler angle data
      * 
      * @param  val
      */
     void get_imu_euler(float *val);  
     /**
-     * @brief 更新电池电压数据
+     * @brief Update battery voltage data
      * 
      * @return  
      */
@@ -119,7 +119,7 @@ class HW_Board {
     const uint16_t imu_update_interval = 10;
     const uint16_t bat_monitor_update_interval = 1000;
 
-    /* 静态校准 */
+    /* Static calibration */
     void imu_calibarate(void);
 
 };

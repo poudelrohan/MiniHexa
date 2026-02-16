@@ -1,6 +1,6 @@
 /**
  * @file WonderLLM_porting.cpp
- * @brief WonderLLM模块驱动(硬件层应用)
+ * @brief WonderLLM module driver (hardware layer)
  * @author ZhiYuan (Gilbert@hiwonder.com)
  */
 
@@ -67,51 +67,51 @@ const char vision_prompt[] =
 
 
 /**
- * @brief 系统延时功能接口
+ * @brief System delay interface
  */
 void delay_ms(int ms_num){
 		delay(ms_num);
 }
 	
 /**
- * @brief 系统实时时间获取接口
+ * @brief System real-time clock interface
  */
 uint32_t Get_time_now(){
 		return millis();
 }
 
 /**
- * @brief IIC扫描接口
- * @note  1.执行非必要，仅是出于程序健壮性的考虑
+ * @brief I2C scan interface
+ * @note  Optional, only for program robustness
  */
 bool Detect_WonderLLM(){
   Wire.beginTransmission(WONDERLLM_SLAVE_ADDRESS);
-	delay_ms(15); //等待一段时间，等待以上配置写入寄存器内部并生效
+	delay_ms(15); // Wait for configuration to be written to registers and take effect
   return (Wire.endTransmission() == 0);
 }
 
 /**
- * @brief IIC速率配置接口
- * @note 涉及较长字符串（尤其是中文）的传输，必须使用调用本函数将IIC速率
- *       提升至400,000，否则WonderLLM将无法完整接收数据 
+ * @brief I2C rate configuration interface
+ * @note For long string transmission, I2C rate must be set to 400kHz
+ *       using this function, otherwise WonderLLM cannot receive complete data
  */
 void IIC_Config_MCP_Transmit(){
 		Wire.setClock(400000);
 }
 
 /**
- * @brief IIC速率配置接口
- * @note 1.执行非必要，如果其他IIC设备均支持40W速率通信，则可不必切换回
- *         较低的100W，执行该函数是出于兼容其他低速IIC设备的考虑
+ * @brief I2C rate configuration interface
+ * @note Optional: if all I2C devices support 400kHz, no need to switch back
+ *       to 100kHz. This is for compatibility with slower I2C devices
  */
 void IIC_Config_normal_Transmit(){
-		// 恢复I2C速率
+		// Restore I2C rate
 		Wire.setClock(100000);
 }
 
 /**
- * @brief I2C底层数据接收接口v1.1
- * @note  适配新版通信协议，JSON字符串分包接收，每包数据加上校验位最大长度为32字节
+ * @brief I2C low-level data receive interfacev1.1
+ * @note  Adapted for new protocol, JSON strings received in packets, max 32 bytes per packet including checksum
  * @return 0: success.
  *         1: received NACK.
  *         2: timeout.
@@ -146,9 +146,9 @@ int WonderLLM_Receive_Data(uint8_t* buffer, uint16_t size,bool stop_flag) {
 }
 
 /**
- * @brief I2C底层数据发送接口
- * @note 1.Wire库的实现使用了一个32字节的缓冲区，因此任何通信都应在此限制范围内进行。在单次传输中超出字节数的将会被丢弃。
- *       2.基于1的原因，发送时每32byte发送一次，剩余部分再按实际长度发送
+ * @brief I2C low-level data send interface
+ * @note 1. Wire library uses a 32-byte buffer, so all communication must stay within this limit. Excess bytes are discarded.
+ *       2. Due to (1), data is sent in 32-byte chunks, with remaining bytes sent at actual length
  * @return 0: success.
  *         1: data too long to fit in transmit buffer.
  *         2: received NACK on transmit of address.
@@ -171,32 +171,32 @@ int WonderLLM_Send_Data(uint8_t* buffer, uint16_t len) {
 
 	  // for(int i =0; i < integer_num; i++){
 
-		// 	//准备传输批量数据，每次32byte
+		// 	// Prepare batch data transmission, 32 bytes each
 		// 	Wire.beginTransmission(WONDERLLM_SLAVE_ADDRESS); 
 
 		// 	for(int y =0; y < 32; y ++){
-		// 		Wire.write(buffer[index]);             // 逐字节传入缓冲区
+		// 		Wire.write(buffer[index]);             // Write bytes to buffer one by one
 		// 		index ++;
 		// 	}
 
 	  //   transmit_result = Wire.endTransmission(false);
 		// 	if(transmit_result != 0 ){
-		// 		return transmit_result;      //发送数据但不产生停止位
+		// 		return transmit_result;      // Send data without stop condition
 		// 	} 
 
 		// }
 
-		// //准备传输剩余不足32byte的数据
+		// // Prepare remaining data less than 32 bytes
 		// Wire.beginTransmission(WONDERLLM_SLAVE_ADDRESS); 
 
 		// for(int z =0; z < surplus_num; z ++){
-		// 	Wire.write(buffer[index]);             // 逐字节传入缓冲区
+		// 	Wire.write(buffer[index]);             // Write bytes to buffer one by one
 		// 	index ++;
 		// }
 
 	  // transmit_result = Wire.endTransmission(true);
 		// if(transmit_result != 0 ){
-		// 	return transmit_result;      //发送数据并产生停止位
+		// 	return transmit_result;      // Send data with stop condition
 		// }
 
 		// return transmit_result;

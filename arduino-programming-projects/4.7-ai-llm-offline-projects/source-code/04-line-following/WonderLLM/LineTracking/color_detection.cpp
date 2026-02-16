@@ -27,8 +27,8 @@ static uint16_t segment2[segmentSize];
 send_color_data_t block_segment;
 
 
-/* 用户可在此处调整颜色阈值
- * 结构: 颜色阈值 - 颜色的面积阈值 - 颜色名称
+/* User adjustable color thresholds
+ * Structure: color threshold - area threshold - color name
  */
 vector<color_info_t> std_color_info = {
     // { {0, 44, 53, 255, 151, 233}, 64, "red"},
@@ -43,7 +43,7 @@ vector<color_info_t> std_color_info = {
 
 static uint8_t state_value;
 
-/* 获取颜色检测的结果 */
+/* Get color detection results */
 static void get_color_detection_result(uint16_t *image_ptr, int image_height, int image_width, 
                                      vector<color_detect_result_t> &results, uint16_t color, 
                                      color_data_t *color_data, int color_index, int segment_index)
@@ -51,7 +51,7 @@ static void get_color_detection_result(uint16_t *image_ptr, int image_height, in
   int max_color_column_index = 0;
   int local_max_area = 0;
   
-  /* 寻找同色最大色块 */
+  /* Find largest blob of same color */
   for (int i = 0; i < results.size(); ++i)
   {
     if (results[i].area > local_max_area)
@@ -61,7 +61,7 @@ static void get_color_detection_result(uint16_t *image_ptr, int image_height, in
     }
   }
   
-  // 更新当前颜色的数据
+  // Update current color data
   if (results.size() > 0)
   {
     switch (color)
@@ -109,26 +109,26 @@ static void modifyPixel(uint16_t *imageBuffer, size_t width,
         return;
     }
 
-    // 计算像素在一维数组中的索引
+    // Calculate pixel index in 1D array
     int index = y * width + x;
 
-    // 组合新的颜色值
+    // Combine new color value
     uint16_t newPixel = (newRed << 11) | (newGreen << 5) | newBlue;
 
-    // 将修改后的像素值写回图像缓冲区
+    // Write modified pixel value back to image buffer
     imageBuffer[index] = newPixel;
 }
 
-// 绘制矩形框函数
+// Draw rectangle function
 static void drawRectangle(uint16_t *imageBuffer, size_t width, size_t height, 
                          int x, int y, int w, int h, uint16_t color) {
-    // 确保坐标在有效范围内
+    // Ensure coordinates are within valid range
     if (x < 0) x = 0;
     if (y < 0) y = 0;
     if (x + w >= width) w = width - x - 1;
     if (y + h >= height) h = height - y - 1;
     
-    // 绘制上边和下边
+    // Draw top and bottom edges
     for (int i = x; i <= x + w; i++) {
         if (i < width && y < height) {
             imageBuffer[y * width + i] = color;
@@ -138,7 +138,7 @@ static void drawRectangle(uint16_t *imageBuffer, size_t width, size_t height,
         }
     }
     
-    // 绘制左边和右边
+    // Draw left and right edges
     for (int i = y; i <= y + h; i++) {
         if (x < width && i < height) {
             imageBuffer[i * width + x] = color;
@@ -149,43 +149,43 @@ static void drawRectangle(uint16_t *imageBuffer, size_t width, size_t height,
     }
 }
 
-// 在图像上绘制检测到的颜色框（每个分段独立绘制）
+// Draw detected color boxes on image (each segment drawn independently)
 static void drawColorBoxes(uint16_t *imageBuffer, size_t width, size_t height, 
                           color_data_t *segment1, color_data_t *segment2) {
-    // 定义各颜色的框颜色
+    // Define box colors for each detected color
     uint16_t colorBoxes[] = {
-        COLOR_RED,    // 红色框
-        COLOR_GREEN,  // 绿色框
-        COLOR_BLUE,   // 蓝色框
-        COLOR_PURPLE  // 紫色框
+        COLOR_RED,    // Red box
+        COLOR_GREEN,  // Green box
+        COLOR_BLUE,   // Blue box
+        COLOR_PURPLE  // Purple box
     };
     
-    // 绘制segment1的框（上半部分）
+    // Draw segment1 boxes (upper section)
     for (int i = 0; i < COLOR_NUM; i++) {
         if (segment1[i].width > 0 && segment1[i].length > 0) {
-            // 计算在完整图像中的坐标
+            // Calculate coordinates in full image
             int x = segment1[i].center_x - segment1[i].width / 2;
             int y = segment1[i].center_y - segment1[i].length / 2;
             
-            // 确保坐标在segment1范围内
+            // Ensure coordinates within segment1 range
             if (x >= 0 && y >= 0 && x + segment1[i].width < width && y + segment1[i].length < height / 3) {
-                // 绘制矩形框
+                // Draw rectangle box
                 drawRectangle(imageBuffer, width, height, x, y, 
                              segment1[i].width, segment1[i].length, colorBoxes[i]);
             }
         }
     }
     
-    // 绘制segment2的框（中半部分）
+    // Draw segment2 boxes (middle section)
     for (int i = 0; i < COLOR_NUM; i++) {
         if (segment2[i].width > 0 && segment2[i].length > 0) {
-            // 计算在完整图像中的坐标（需要加上segment1的高度偏移）
+            // Calculate coordinates in full image（需要加上segment1的高度偏移）
             int x = segment2[i].center_x - segment2[i].width / 2;
             int y = segment2[i].center_y - segment2[i].length / 2 + (height / 3);
             
-            // 确保坐标在segment2范围内
+            // Ensure coordinates within segment2 range
             if (x >= 0 && y >= height / 3 && x + segment2[i].width < width && y + segment2[i].length < 2 * height / 3) {
-                // 绘制矩形框
+                // Draw rectangle box
                 drawRectangle(imageBuffer, width, height, x, y, 
                              segment2[i].width, segment2[i].length, colorBoxes[i]);
             }
@@ -193,7 +193,7 @@ static void drawColorBoxes(uint16_t *imageBuffer, size_t width, size_t height,
     }
 }
 
-// 将RGB565图像分成三份
+// Split RGB565 image into three sections
 static void splitImageIntoThreeSegments(uint16_t *imageBuffer, size_t width, size_t height, 
                                  uint16_t *segment1, uint16_t *segment2) {
     size_t segmentHeight = height / 3;
@@ -204,11 +204,11 @@ static void splitImageIntoThreeSegments(uint16_t *imageBuffer, size_t width, siz
             int index = (int)(y * width + x);
             int localIndex = (int)((y % segmentHeight) * width + x);
             if (y < segmentHeight) {
-                // 第一部分
+                // Part 1
                 segment1[localIndex] = imageBuffer[index];
             } 
             else if (y < 2 * segmentHeight) {
-                // 第二部分
+                // Part 2
                 segment2[localIndex] = imageBuffer[index];
             } 
         }
@@ -226,10 +226,10 @@ static void mergeSegmentsIntoImage(uint16_t *newImage, size_t width, size_t heig
             int localIndex = (y % segmentHeight) * width + x;
 
             if (y < segmentHeight) {
-                // 第一部分
+                // Part 1
                 newImage[index] = segment1[localIndex];
             } else if (y < 2 * segmentHeight) {
-                // 第二部分
+                // Part 2
                 newImage[index] = segment2[localIndex];
             }
 
@@ -243,7 +243,7 @@ static void task_process_handler(void *arg)
   ColorDetector detector;
   uint32_t processed_frames = 0;
 
-  /* 注册颜色信息 */
+  /* Register color information */
   for (int i = 0; i < std_color_info.size(); ++i)
   {
     detector.register_color(std_color_info[i].color_thresh, std_color_info[i].area_thresh, std_color_info[i].name);
@@ -303,18 +303,18 @@ static void task_process_handler(void *arg)
 
       mergeSegmentsIntoImage((uint16_t *)frame->buf, frame->width, frame->height, segment1, segment2);
       
-      // 在图像上绘制检测到的颜色框
+      // Draw detected color boxes on image
       drawColorBoxes((uint16_t *)frame->buf, frame->width, frame->height, 
                     block_segment.segment1, block_segment.segment2);
       
       tft_show_rgb565((const uint16_t *)frame->buf, frame->width, frame->height);
       
-      // 立即释放帧缓冲区，避免缓冲区堆积
+      // Release frame buffer immediately to prevent accumulation
       esp_camera_fb_return(frame);
       frame = NULL;
     }
     
-    // 发送检测结果到IIC队列
+    // Send detection results to I2C queue
     if (xQueueResult)
     {
       xQueueSend(xQueueResult, &block_segment, portMAX_DELAY);             

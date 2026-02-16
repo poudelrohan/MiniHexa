@@ -11,9 +11,9 @@ static RecData_t read_data(String data)
 
   while (data_update.indexOf('|') != -1)
   {
-    rec_data[index] = data_update.substring(0, data_update.indexOf('|'));  /* 提取字符串 */
-    data_update = data_update.substring(data_update.indexOf('|') + 1);       /* 更新字符串，去掉已提取的子字符串和分隔符 */
-    index++;      /* 更新索引 */
+    rec_data[index] = data_update.substring(0, data_update.indexOf('|'));  /* Extract substring */
+    data_update = data_update.substring(data_update.indexOf('|') + 1);       /* Update string, remove extracted substring and delimiter */
+    index++;      /* Update index */
   }
 
   rec_data[index] = data_update;
@@ -104,7 +104,7 @@ static RecData_t read_data(String data)
 
 void UartServerManager::begin()
 {
-  Serial.setRxBufferSize(2048);  // 增大接收缓冲区到2KB
+  Serial.setRxBufferSize(2048);  // Increase TX buffer to 2KB
   Serial.begin(115200);
 }
 

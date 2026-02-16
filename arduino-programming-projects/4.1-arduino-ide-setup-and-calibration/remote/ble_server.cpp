@@ -14,9 +14,9 @@ RecData_t BLEServerManager::read_data(String data)
   data_update = data;
 
   while (data_update.indexOf('|') != -1) {
-    rec_data[index] = data_update.substring(0, data_update.indexOf('|'));  /* 提取字符串 */
-    data_update = data_update.substring(data_update.indexOf('|') + 1);       /* 更新字符串，去掉已提取的子字符串和分隔符 */
-    index++;      /* 更新索引 */
+    rec_data[index] = data_update.substring(0, data_update.indexOf('|'));  /* Extract substring */
+    data_update = data_update.substring(data_update.indexOf('|') + 1);       /* Update string, remove extracted substring and delimiter */
+    index++;      /* Update index */
   }
   rec_data[index] = data_update;
   // for(uint8_t i  =0; i < 7; i++) {
@@ -81,13 +81,13 @@ void BLEServerManager::MyCallbacks::onWrite(BLECharacteristic *pCharacteristic)
 {
   String value = pCharacteristic->getValue();
   if (value.length() > 0) {
-    ble_buf += value;  // 将接收到的数据追加到缓冲区
-    size_t endPos = ble_buf.find('&');
-    if(endPos != std::string::npos) {
+    ble_buf += value;  // Append received data to buffer
+    int endPos = ble_buf.indexOf('&');
+    if(endPos != -1) {
       rec_state = RECEIVE_DATA_SUCCESS;
-      std::string completeData = ble_buf.substr(0, endPos);  // 提取完整数据
-      ble_buf.erase(0, endPos + 1);  // 移除已处理的数据
-      rec = BLEServerManager::read_data(completeData.c_str());
+      String completeData = ble_buf.substring(0, endPos);  // Extract complete data
+      ble_buf = ble_buf.substring(endPos + 1);  // Remove processed data
+      rec = BLEServerManager::read_data(completeData);
       ESP_LOGI("BLE", "receive %s\n", completeData.c_str());
     }
   }
@@ -141,10 +141,10 @@ void BLEServerManager::begin()
 
 void BLEServerManager::send_message(uint16_t value_1, uint16_t value_2)
 {
-  std::string message = "$" + std::to_string(value_1) + "$"+ std::to_string(value_2) +"$";
-  if (!message.empty())
+  String message = "$" + String(value_1) + "$" + String(value_2) + "$";
+  if (message.length() > 0)
   {
-    pTxCharacteristic->setValue(String(message.c_str()));
+    pTxCharacteristic->setValue(message);
     pTxCharacteristic->notify();
   }
 }

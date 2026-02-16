@@ -22,13 +22,13 @@ RecData_t WiFiServerManager::read_data(String data)
 
   while (data_update.indexOf('|') != -1)
   {
-    rec_data[index] = data_update.substring(0, data_update.indexOf('|'));  /* 提取字符串 */
-    data_update = data_update.substring(data_update.indexOf('|') + 1);       /* 更新字符串，去掉已提取的子字符串和分隔符 */
-    index++;      /* 更新索引 */
+    rec_data[index] = data_update.substring(0, data_update.indexOf('|'));  /* Extract substring */
+    data_update = data_update.substring(data_update.indexOf('|') + 1);       /* Update string, remove extracted substring and delimiter */
+    index++;      /* Update index */
   }
   rec_data[index] = data_update;
   
-  // char charArray = rec_data[0].c_str();      /* 转成C字符串形式 */
+  // char charArray = rec_data[0].c_str(); /* Convert to C string */
 
   if(rec_data[0] == "C") {
     rec.mode = MINIHEXA_MOVING_CONTROL;
@@ -49,14 +49,14 @@ RecData_t WiFiServerManager::read_data(String data)
   return rec;
 }
 
-/* 若无连接到对应wifi则返回false,若连接到wifi则返回true并进入WIFI数据接收模式 */
+/* Returns false if not connected to WiFi, true if connected and enters WiFi data receive mode */
 bool WiFiServerManager::begin()
 {
   if((WiFi.status() == WL_CONNECTED) && (wifi_connection_state == false))
   {
     ESP_LOGI("WIFI", "Connected to WIFI!\n");
     String macAddress = WiFi.macAddress();
-    macAddress.replace(":", "");           // 去掉 MAC 地址中的冒号，得到 240AC4123456
+    macAddress.replace(":", "");           // Remove colons from MAC address, e.g. 240AC4123456
     clientAddress = "MINIHEXA:" + macAddress;
     cClientAddress = clientAddress.c_str();
     udpClient.begin(UDP_LISTENER_PORT);
@@ -70,14 +70,14 @@ bool WiFiServerManager::begin()
   return wifi_connection_state;
 }
 
-/* 进入到WIFI模式后如果UDP数据配对成功，则进入到数据传输模式，进入到数据传输模式后，需要把udp_pairing_state 和 wifi_connection_state重新设置为false*/
+/* After WiFi mode, if UDP pairing succeeds, enter data transfer mode. Reset udp_pairing_state and wifi_connection_state to false */
 bool WiFiServerManager::udp_server()
 {
   int packetSize = 0;
   static uint32_t tick_start = 0;
   
   if(millis() - tick_start > 1000) {
-    // 检查是否有新的 UDP 广播数据
+    // Check for new UDP broadcast data
     packetSize = udpClient.parsePacket();
     tick_start = millis();
   }
@@ -87,15 +87,15 @@ bool WiFiServerManager::udp_server()
     int len = udpClient.read(incomingPacket, 255);    
     if (len > 0)
     {
-        incomingPacket[len] = 0; // 确保字符串结束
+        incomingPacket[len] = 0; // Ensure null-terminated string
     }
     if (strcmp(incomingPacket, "LOBOT_NET_DISCOVER") == 0)
     {
-      // 获取广播发送方的 IP 地址
+      // Get broadcast sender IP address
       clientIP = udpClient.remoteIP();
       ESP_LOGI("WIFI", "Client IPAddress: %d.%d.%d.%d\n", clientIP[0], clientIP[1], clientIP[2], clientIP[3]);
       udpClient.beginPacket(clientIP, UDP_SEND_PORT);
-      udpClient.print(clientAddress);  // 发送 MAC 地址
+      udpClient.print(clientAddress);  // Send MAC address
       udpClient.endPacket();
       // memset(incomingPacket, 0, sizeof(incomingPacket));   
       udp_pairing_state = true;
@@ -106,10 +106,10 @@ bool WiFiServerManager::udp_server()
 
 bool WiFiServerManager::tcp_server()
 {
-  // 检查是否有新的客户端连接
+  // Check for new client connection
   if (!tcpClient && (tcp_connection_state == false))
   {
-    tcpClient = tcpServer.available();  // 检查是否有客户端连接
+    tcpClient = tcpServer.available();  // Check if client connected
     
     if (tcpClient)
     {
@@ -123,15 +123,15 @@ bool WiFiServerManager::tcp_server()
       return false;
     }
   }  
-  // 如果客户端已经连接，检查是否有数据可读
+  // If client connected, check for readable data
   if(tcp_connection_state == true)
   {
     if(!tcpClient.connected())
     {
       ESP_LOGI("WIFI", "Client disconnected!\n");
       tcp_connection_state = false;
-      udpClient.stop();  // 关闭客户端连接
-      tcpClient.stop();  // 关闭客户端连接
+      udpClient.stop();  // Close client connection
+      tcpClient.stop();  // Close client connection
       tcp_state = DISCONNECTED;
       return false;
     }
@@ -139,12 +139,12 @@ bool WiFiServerManager::tcp_server()
     {
       // tcp_state = 2;
       size_t bytesRead = tcpClient.readBytesUntil('&', rec_buffer, sizeof(rec_buffer) - 1);
-      rec_buffer[bytesRead] = '\0';  // 添加字符串结束符
-      String fullData = String(rec_buffer);  // 转换 rec_buffer 为 String
+      rec_buffer[bytesRead] = '\0';  // Add null terminator
+      String fullData = String(rec_buffer);  // Convert rec_buffer to String
       rec = WiFiServerManager::read_data(fullData);
       // printf("fullData %s\n", fullData.c_str());
       ESP_LOGI("Received from client", "%s", fullData.c_str());
-      // 向客户端发送响应数据
+      // Send response data to client
       // String response = "ESP32 received: " + clientData;
       // tcpClient.println(response);
       tcp_state = RECEIVEDATA;

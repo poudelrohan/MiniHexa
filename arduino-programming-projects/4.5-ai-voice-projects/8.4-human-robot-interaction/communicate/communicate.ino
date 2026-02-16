@@ -12,15 +12,15 @@ void setup() {
 void loop() {
   result = minihexa.sensor.asr.rec_recognition();
   switch(result) {
-    case 26:  /* 识别到你好 */
+    case 26:  /* Recognized "Hello" */
       minihexa.action_group_run(14);
       break;
 
-    case 27:  /* 识别到介绍自己 */
+    case 27:  /* Recognized "Introduce yourself" */
       minihexa.acting_cute();
       break;
 
-    case 28:  /* 识别到露一手 */
+    case 28:  /* Recognized "Show a trick" */
       minihexa.action_group_run(7);
       break;
     

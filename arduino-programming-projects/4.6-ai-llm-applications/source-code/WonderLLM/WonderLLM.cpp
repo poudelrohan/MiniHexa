@@ -1,7 +1,7 @@
 /**
  * @file WonderLLM.cpp
- * @brief WonderLLM模块驱动(抽象层应用)
- * @note  此文件只涉及模块工作逻辑调度，具体底层硬件操作详见”WonderLLM_porting”，移植时无需修改
+ * @brief WonderLLM module driver (abstraction layer)
+ * @note  This file handles module logic only. See WonderLLM_porting for hardware ops. No changes needed for porting.
  * @author ZhiYuan (Gilbert@hiwonder.com)
  */
 
@@ -14,10 +14,10 @@
 
 #define debug_mode 0
 
-// --- 内部静态变量 ---
+// --- Internal static variables ---
 WonderLLM_Info WonderLLM_hiwonder;
 
-// --- 静态函数原型 ---
+// --- Static function prototypes ---
 static int parse_command(WonderLLM_Info *obj,const char* json_str);
 static bool send_frame(const uint8_t* data, uint16_t len);
 static bool receive_frame(uint8_t* buffer, uint16_t* len);
@@ -25,29 +25,29 @@ static uint8_t calculate_checksum(const uint8_t* data, uint16_t len);
 static bool register_tools(void);
 
 /**
- * @brief 确认模块是否存在，完成自定义MCP工具注册
+ * @brief Check if module exists, complete custom MCP tool registration
  */
 bool WonderLLM_Init(void) {
-    uint32_t start_tick =  Get_time_now(); // 记录开始时间
+    uint32_t start_tick =  Get_time_now(); // Record start time
 
     while (1) {
-        // 1. 检查设备是否就绪
+        // 1. Check if device is ready
         if (Detect_WonderLLM() == true) {
-            // 设备找到，执行初始化序列
+            // Device found, execute initialization sequence
 						IIC_Config_MCP_Transmit();	
             delay_ms(5);
-            register_tools(); // 调用MCP写入工具	
+            register_tools(); // Call MCP tool registration	
 						IIC_Config_normal_Transmit();
 
 						return true;
 
-         }else{		// 2. 如果设备未找到，检查是否超时
+         }else{		// 2. Device not found, check timeout
 
 						if(Get_time_now() - start_tick > 3000){
-								// 超过5秒仍未找到设备，初始化失败
+								// Device not found after 5s, initialization failed
 								return false;						
 						}else{
-								// 3. 短暂延时，避免疯狂查询占用CPU和I2C总线
+								// 3. Brief delay to avoid excessive I2C bus polling
 				        delay_ms(100); 						
 						}
 				 
@@ -57,7 +57,7 @@ bool WonderLLM_Init(void) {
 
 
 /**
- * @brief 在主循环中轮询接收来自WonderLLM的指令
+ * @brief Poll and receive commands from WonderLLM in main loop
  */
 
 void WonderLLM_Info_Get(WonderLLM_Info *obj) {
@@ -67,13 +67,13 @@ void WonderLLM_Info_Get(WonderLLM_Info *obj) {
 				obj->Detection_WonderLLM = 1;
 
 				uint16_t received_len = sizeof(obj->json_data_raw);
-				//尝试从IIC总线收取数据
-				//将wonderllm发来的json字符串原文同步拷贝至json_data_raw备份
+				// Try to receive data from I2C bus
+				// Copy raw JSON string from WonderLLM to json_data_raw backup
 				if (receive_frame((uint8_t*)obj->json_data_raw, &received_len)) {
 						if (received_len > 0) {
-								//将接收信息帧末尾加上 '\0'构造成字符串，便于调用字符串专用的strstr、sscanf等工具函数
+								// Append '\0'to build a string for strstr, sscanf etc.
 								obj->json_data_raw[received_len] = '\0';
-								//解析信息帧
+								// Parse message frame
 								obj->Frame_mode = (FrameMode)parse_command(obj,obj->json_data_raw);
 							
 						}
@@ -84,8 +84,8 @@ void WonderLLM_Info_Get(WonderLLM_Info *obj) {
 }
 
 /**
- * @brief 发送动作执行成功的响应
- * @note 系统指令，参见通信协议
+ * @brief Send action execution success response
+ * @note System command, see communication protocol
  */
 
 void WonderLLM_Send_Action_Finish(void) {
@@ -95,8 +95,8 @@ void WonderLLM_Send_Action_Finish(void) {
 }
 
 /**
- * @brief 发送状态信息
- * @note 系统指令，参见通信协议
+ * @brief Send status information
+ * @note System command, see communication protocol
  */
 void WonderLLM_Send_Status(const char* params_str) {
     char json_str[128];
@@ -106,18 +106,18 @@ void WonderLLM_Send_Status(const char* params_str) {
 
 
 /**
- * @brief 向 WonderLLM 模块请求进行一次视觉识别
- * @param prompt 描述你想让大模型做什么的字符串
- * @note 1.系统指令，参见通信协议
- *       2.传入的提示符字符串内部不能包含双引号，否则会导致WonderLLM解析失败
- *       3.涉及较长字符串（尤其是中文）的传输，必须使用调用IIC_Config_MCP_Transmit将IIC速率
- *         提升至400,000，否则WonderLLM将无法完整接收数据
- *       4.模块完成配网前(白色滚动条消失出现表情界面)，该功能无效     
+ * @brief Request WonderLLM module to perform visual recognition
+ * @param prompt String describing what you want the LLM to do
+ * @note 1. System command, see communication protocol
+ *       2. Prompt string must not contain double quotes or WonderLLM parsing will fail
+ *       3. For long string transmission, I2C rate must be set to 400kHz using IIC_Config_MCP_Transmit,
+ *         otherwise WonderLLM cannot receive complete data
+ *       4. This function is invalid before module network setup is complete (emoji face appears)     
  */
 void WonderLLM_Request_Vision(const char* prompt) {
     char json_str[256];
     
-    // 使用 snprintf 安全地构建 JSON 字符串
+    // Safely build JSON string using snprintf
     snprintf(json_str, sizeof(json_str), 
              "{\"tool_name\":\"mcu.request\",\"command\":\"vision\",\"params\":\"%s\"}", 
              prompt);
@@ -126,51 +126,51 @@ void WonderLLM_Request_Vision(const char* prompt) {
 						
     delay_ms(5);
 		
-    // 调用已有的 send_frame 函数发送这个请求
+    // Call existing send_frame function to send this request
     send_frame((uint8_t*)json_str, strlen(json_str));			
 
 }
 
 /**
- * @brief 解析收到的JSON指令字符串
+ * @brief Parse received JSON command string
  */
 
 static int parse_command(WonderLLM_Info *obj,const char* json_str) {
 	
-		 /*匹配消息帧中是否有“move”，确认其是否属于self.robot.move类型消息*/
+		 /* Check if frame contains "move" for self.robot.move type */
 		 if (strstr(json_str, "move") != NULL) {
 				
         char* dist_ptr;
-				//扫描消息帧中是否有“move”字段
+				// Scan for "move" field
         dist_ptr = strstr(json_str, "move");
-				//将move字段的数据提取
+				// Extract data from "move" field
 				if (dist_ptr) sscanf(dist_ptr, "%*[^:]:%hhd", &(obj->movement_direction));
 
-				//扫描消息帧中是否有“step_num”字段
+				// Scan for "step_num" field
         dist_ptr = strstr(json_str, "step_num");
-				//将step_num字段的数据提取
+				// Extract data from "step_num" field
 				if (dist_ptr) sscanf(dist_ptr, "%*[^:]:%hd", &(obj->motion_target_step));		
 
         dist_ptr = strstr(json_str, "duration");
-				//将duration字段的数据提取
+				// Extract data from "duration" field
 				if (dist_ptr) sscanf(dist_ptr, "%*[^:]:%hd", &(obj->motion_target_RunningTime));
 
         dist_ptr = strstr(json_str, "distance");
-				//将duration字段的数据提取
+				// Extract data from "duration" field
 				if (dist_ptr) sscanf(dist_ptr, "%*[^:]:%hd", &(obj->motion_target_distance));
 
         dist_ptr = strstr(json_str, "angle");
-				//将duration字段的数据提取
+				// Extract data from "duration" field
 				if (dist_ptr) sscanf(dist_ptr, "%*[^:]:%hd", &(obj->motion_target_RotationAngle));
 
 				return Frame_move;
      }
 
-		 /*匹配消息帧中是否有“status_name”，确认其是否属于self.robot.get_status类型消息*/
-		 /*注意1：get_status类型消息检测必须在set_mode类型消息类检测前进行，
-			       否则获取运动状态的get_status消息帧因为含running_mode字段
-			       也会被误判成set_mode类型消息*/
-		 /*注意2：get_status类型消息检测必须在BaryCenterMove类型消息类检测前进行，原因同上*/
+		 /* Check if frame contains "status_name" for get_status type */
+		 /* Note 1: get_status detection must precede set_mode detection,
+		            otherwise get_status frames containing running_mode field
+		            would be misidentified as set_mode type */
+		 /* Note 2: get_status detection must precede BaryCenterMove detection, same reason */
      else if (strstr(json_str, "status_name") != NULL) {
 				 FrameMode mode = Frame_NULL; 
 			 
@@ -201,13 +201,13 @@ static int parse_command(WonderLLM_Info *obj,const char* json_str) {
 				 return mode;
      }
 
-		 /*匹配消息帧中是否有“pose”，确认其是否属于self.robot.BaryCenterMove类型消息*/
+		 /* Check if frame contains "pose" for BaryCenterMove type */
 		 else if (strstr(json_str, "pose") != NULL) {
 				
         char* dist_ptr;
-				//扫描消息帧中是否有“pose”字段
+				// Scan for "pose" field
         dist_ptr = strstr(json_str, "pose");
-				//将pose字段的数据提取
+				// Extract data from "pose" field
 				if (dist_ptr) {
 					sscanf(dist_ptr, "%*[^:]:%hhd", &(obj->BaryCenter_direction));
 				}
@@ -215,13 +215,13 @@ static int parse_command(WonderLLM_Info *obj,const char* json_str) {
 				return Frame_BaryCenterMove;
      }
 
-		 /*匹配消息帧中是否有“Inclination”，确认其是否属于self.robot.InclinationAngleMove类型消息*/
+		 /* Check if frame contains "Inclination" for InclinationAngleMove type */
 		 else if (strstr(json_str, "Inclination") != NULL) {
 				
         char* dist_ptr;
-				//扫描消息帧中是否有“Inclination”字段
+				// Scan for "Inclination" field
         dist_ptr = strstr(json_str, "Inclination");
-				//将Inclination字段的数据提取
+				// Extract data from "Inclination" field
 				if (dist_ptr) {
 					sscanf(dist_ptr, "%*[^:]:%hhd", &(obj->incline_direction));
 				}
@@ -229,12 +229,12 @@ static int parse_command(WonderLLM_Info *obj,const char* json_str) {
 				return Frame_InclinationAngleMove;
      }
 
-		//  /*匹配消息帧中是否有“stop”，确认其是否属于self.robot.stop类型消息*/
+		//  /* Check if frame contains "stop" for self.robot.stop type */
 		//  if (strstr(json_str, "stop") != NULL) {
 		// 		return Frame_stop;
 		//  }
 
-		 /*匹配消息帧中是否有“running_mode”，确认其是否属于self.robot.set_SpeedMode类型消息*/
+		 /* Check if frame contains "running_mode" for set_SpeedMode/set_RunningMode type */
 		 else if (strstr(json_str, "running_mode") != NULL) {
 			 if (strstr(json_str, "normal")) {
 					obj->running_mode = 1; 
@@ -250,9 +250,9 @@ static int parse_command(WonderLLM_Info *obj,const char* json_str) {
 					}
 
 					char* dist_ptr;
-					//扫描消息帧中是否有“distance”字段
+					// Scan for "distance" field
 					dist_ptr = strstr(json_str, "distance");
-					//将distance字段的数据提取
+					// Extract data from "distance" field
 					if (dist_ptr) {
 						sscanf(dist_ptr, "%*[^:]:%hu", &(obj->avoid_distance));
 					}				 				
@@ -264,7 +264,7 @@ static int parse_command(WonderLLM_Info *obj,const char* json_str) {
 		   
      }
 
-		 /*匹配消息帧中是否有“running_mode”，确认其是否属于self.robot.set_SpeedMode类型消息*/
+		 /* Check if frame contains "running_mode" for set_SpeedMode/set_RunningMode type */
 		 else if (strstr(json_str, "speed_mode") != NULL) {
 			 if (strstr(json_str, "Low_speed")) {
 					obj->Speed_Mode = 1; 
@@ -278,7 +278,7 @@ static int parse_command(WonderLLM_Info *obj,const char* json_str) {
 		   
      }
 		
-		 /*匹配消息帧中是否有“lr”，确认其是否属于self.robot.set_led_color类型消息*/
+		 /* Check if frame contains "lr" for set_led_color type */
 		 else if (strstr(json_str, "\"lr\"") != NULL) {
 
   			char* ptr;
@@ -301,8 +301,8 @@ static int parse_command(WonderLLM_Info *obj,const char* json_str) {
 				ptr = strstr(json_str, "\"rb\"");
 				if (ptr) sscanf(ptr, "%*[^:]:%hhu", &(obj->rgb_right[2]));
 
-        // 将解析出的值赋给全局的RGB数组
-        // 注意进行范围检查和类型转换
+        // Assign parsed values to global RGB arrays
+        // Perform range check and type conversion
         obj->rgb_left[0] = (obj->rgb_left[0] > 255) ? 255 : ((obj->rgb_left[0] < 0) ? 0 : obj->rgb_left[0]);
         obj->rgb_left[1] = (obj->rgb_left[1] > 255) ? 255 : ((obj->rgb_left[1] < 0) ? 0 : obj->rgb_left[1]);
         obj->rgb_left[2] = (obj->rgb_left[2] > 255) ? 255 : ((obj->rgb_left[2] < 0) ? 0 : obj->rgb_left[2]);
@@ -314,7 +314,7 @@ static int parse_command(WonderLLM_Info *obj,const char* json_str) {
 				return Frame_set_led_color;
     }
 		
-		 /*匹配消息帧中是否有“count”，确认其是否属于self.robot.set_buzzer类型消息*/
+		 /* Check if frame contains "count" for set_buzzer type */
 		 else if (strstr(json_str, "count") != NULL) {				
 		 	 char* ptr;			 
 			 ptr = strstr(json_str, "\"count\"");		 
@@ -324,7 +324,7 @@ static int parse_command(WonderLLM_Info *obj,const char* json_str) {
 			 return Frame_set_buzzer;
      }
 
-		 /*匹配消息帧中是否有“actionNum”，确认其是否属于self.robot.ActionGroup类型消息*/
+		 /* Check if frame contains "actionNum" for ActionGroup type */
 		 else if (strstr(json_str, "actionNum") != NULL) {
 		 	 char* ptr;
 			 ptr = strstr(json_str, "\"actionNum\"");
@@ -336,7 +336,7 @@ static int parse_command(WonderLLM_Info *obj,const char* json_str) {
 			 return Frame_ActionGroup;
      }
 
-		 /*匹配消息帧中是否有“vision”，确认其是否属于系统类型消息*/
+		 /* Check if frame contains "vision" for system type */
 		 else if (strstr(json_str, "vision") != NULL) {
 				// if (strstr(json_str, "true") != NULL) {
 				// 	obj->Vision_Result = 1;
@@ -347,7 +347,7 @@ static int parse_command(WonderLLM_Info *obj,const char* json_str) {
 			  return Frame_vision_analysis;
      }
 
-		//  /*匹配消息帧中是否有“reply”，确认其是否属于系统类型消息*/
+		//  /* Check if frame contains "reply" for system type */
 		//  else if (strstr(json_str, "reply") != NULL) {
 
 		// 	 return Frame_reply;
@@ -356,32 +356,28 @@ static int parse_command(WonderLLM_Info *obj,const char* json_str) {
 }
 
 /**
- * @brief 向WonderLLM模块注册所有可用的工具(功能)
- * @note  涉及较长字符串（尤其是中文）的传输，必须使用调用IIC_Config_MCP_Transmit将IIC速率
- *        提升至400,000，否则WonderLLM将无法完整接收数据
+ * @brief Register all available tools (functions) with WonderLLM module
+ * @note  For long string transmission, I2C rate must be set to 400kHz using
+ *        IIC_Config_MCP_Transmit, otherwise WonderLLM cannot receive complete data
  */
 static bool register_tools(void) {
 
 /*
-		注册用户自定义mcp工具
-	  tool_name：注册的MCP工具名（保持格式`self`开头，命名一定要清晰的让大模型知道它的作用，尽量不要用缩写）
-	
-		command：引导大模型何时使用该工具，并对需要回传主机的参数进行介绍
-	
-		params：WonderLLM向主机回传的该类型信息帧中包含的参数，格式:[[参数名1，参数类型，可取值min(非必要，string类型无),可取值max(非必要，string类型无)] ,[参数2...]]
-					（string表示该参数项具体内容由大模型给出，根据上下文对话决定）
-					（参数类型目前仅支持string、int、bool）
-	
-		return：表示主机是否需要返回数据给WonderLLM
-						true-需要，当为true时，block参数项设置不生效，因为return本身就是阻塞的
-						     (使用基础系统指令status，见WonderLLM_Send_Status）
-						false-不需要
-	
-		block：是否为阻塞式执行，若是，则WonderLLM会等待主机回复确认指令执行完成后再继续往下运行
-					 true-是，则执行完WonderLLM回传消息帧附带的指令，主机需回复WonderLLM指令执行完成
-								（使用基础系统指令action_finish，见WonderLLM_Send_Action_Finish）
-					 false-不是，WonderLLM通过信息帧向主机下发指令后直接向后执行，不再关注指令的执行结果
-	
+    Register custom MCP tools:
+    tool_name: Registered MCP tool name (must start with `self`, use clear naming so the LLM understands its purpose)
+    command: Guide the LLM on when to use this tool, describe parameters to return to host
+    params: Parameters in the message frame from WonderLLM to host.
+            Format: [[param_name, param_type, min(optional), max(optional)], [param2...]]
+            (string type = content determined by LLM based on conversation context)
+            (Supported param types: string, int, bool)
+    return: Whether host needs to return data to WonderLLM
+            true - required, when true block setting is ignored (return is inherently blocking)
+                   (use system command status, see WonderLLM_Send_Status)
+            false - not required
+    block: Whether execution is blocking. If yes, WonderLLM waits for host confirmation before continuing
+           true - host must reply command completion after executing
+                  (use system command action_finish, see WonderLLM_Send_Action_Finish)
+           false - WonderLLM sends command and continues without waiting for result
 */
 
 
@@ -425,7 +421,7 @@ static bool register_tools(void) {
 			return false;
 		}
 
-		/*系统指令-MCP注册完成指令*/		
+		/* System command - MCP registration complete */		
     // static const char* tool_finish = "{\"command\":\"mcp_setting\",\"params\":\"true\"}";	
 		if (!send_frame((uint8_t*)tool_finish, strlen(tool_finish))){
 			return false;
@@ -435,16 +431,16 @@ static bool register_tools(void) {
 }
 
 /**
- * @brief 将数据帧通过I2C发送出去
+ * @brief Send data frame via I2C
  */
 static bool send_frame(const uint8_t* data, uint16_t len) {
 
-	   // 检查数据和长度是否有效
+	   // Check if data and length are valid
     if (data == NULL || len == 0) {
         return false;
     }
 		
-		// 直接发送 data 指针指向的内存区域，长度为 len
+		// Send data pointed to by data pointer, length = len
     if(WonderLLM_Send_Data((uint8_t *)data,len) !=0){
 			return false;
 		} 
@@ -454,21 +450,21 @@ static bool send_frame(const uint8_t* data, uint16_t len) {
 }
 
 /**
- * @brief 接收8字节帧头
+ * @brief Receive 8-byte frame header
  */
 static bool receive_frame_head(uint16_t* part_ID, uint16_t* part_num, uint16_t* data_len) {
 		uint8_t header[8];
 
-		/*step1 收取“帧头+长度”并校验*/
+		/* step1: Receive header+length and verify */
     if(WonderLLM_Receive_Data(header, 8, true) != 0){
 			return false;
 		}
 
-		/*step1.1 校验帧头*/
+		/* step1.1: Verify frame header */
     if (header[0] != 0xAA || header[1] != 0x55) return false;
 		delay_ms(1);
     
-		/*step1.2 解析帧长度并校验合法性*/
+		/* step1.2: Parse frame length and verify validity */
     *data_len = ((uint16_t)header[2] << 8) | header[3];
 
     if (*data_len == 0|| *data_len > 31){
@@ -479,7 +475,7 @@ static bool receive_frame_head(uint16_t* part_ID, uint16_t* part_num, uint16_t* 
 
 		#if (debug_mode ==1)
 			if(*data_len != 1){
-				//控制1个引脚高低电平变化，使用逻辑分析仪同时监测SCL/SDA引脚和该引脚，可以很快定位JSON字符串数据收取时刻
+				// Toggle pin for logic analyzer debugging of JSON data reception timing
 				digitalWrite(6, HIGH);
 				Serial.print("rec_dataLen:");
 				Serial.println(*data_len);
@@ -487,7 +483,7 @@ static bool receive_frame_head(uint16_t* part_ID, uint16_t* part_num, uint16_t* 
 			}
 		#endif
 
-		/*step1.3 解析总分片数和当前分片ID*/
+		/* step1.3: Parse total fragments and current fragment ID */
 		*part_ID = ((uint16_t)header[5] << 8) | header[4]; 
 		*part_num = ((uint16_t)header[7] << 8) | header[6];
 
@@ -495,7 +491,7 @@ static bool receive_frame_head(uint16_t* part_ID, uint16_t* part_num, uint16_t* 
 }
 
 /**
- * @brief 从I2C接收一个完整的数据帧
+ * @brief Receive a complete data frame from I2C
  */
 static bool receive_frame(uint8_t* buffer, uint16_t* len) {
 		uint16_t data_len = 0;
@@ -509,7 +505,7 @@ static bool receive_frame(uint8_t* buffer, uint16_t* len) {
 		data_len_max = *len;
 		*len =0;
 
-		/*step1 接收帧头并校验*/
+		/* step1: Receive frame header and verify */
 		if(receive_frame_head(&part_ID, &part_num, &data_len)){
 			*len += data_len;
 		}else{
@@ -517,26 +513,26 @@ static bool receive_frame(uint8_t* buffer, uint16_t* len) {
 			return false;
 		}
 
-		/*step2 收取“帧数据+校验位”*/
-		//如果当前收到的数据包不是第一包，说明前面丢包了，此时收到的是残缺的数据，直接退出
+		/* step2: Receive frame data + checksum */
+		// If current packet is not the first, packets were lost - exit
 		if(part_ID != 1){
 			Serial.println(F("receive_frame_not_first"));
 			return false;
 
-		}else{  //从第一包开始连续接收全部数据
+		}else{  // Start receiving all data from first packet
 
 			uint8_t result =0;
 
-				//data_len(数据长度)+1(校验位)
-				//每1包数据的校验位会在接收下一包数据接收时被覆盖
-				//最后1包数据的校验位会被后续构造字符串的‘\0’字符覆盖
+				// data_len (data length) + 1 (checksum)
+				// Each packet's checksum is overwritten when receiving the next packet
+				// Last packet's checksum is overwritten by null terminator
 			for(int i=1; i<=part_num; i++){
 
 				delay_ms(10);
 
 				result = WonderLLM_Receive_Data((buffer + buffer_index), data_len + 1, true);			
 
-				//异常处理，判断读取是否正常
+				// Error handling - check if read was successful
 				if(result != 0){
 					Serial.print("rec_result:");
 					Serial.println(result);
@@ -544,7 +540,7 @@ static bool receive_frame(uint8_t* buffer, uint16_t* len) {
 					return false;
 				}
 
-				//确认校验位合法性
+				// Verify checksum validity
 				if (buffer[buffer_index + data_len] == calculate_checksum((buffer + buffer_index), data_len)){
 
 				#if(debug_mode ==1)					
@@ -558,12 +554,12 @@ static bool receive_frame(uint8_t* buffer, uint16_t* len) {
 
 					buffer_index += data_len;
 
-				}else{ //校验不合格，清空已经存储的数据并退出
+				}else{ // Checksum invalid, clear stored data and exit
 
 					Serial.println(F("calculate error"));
 
 					#if(debuf_mode ==1)
-						/*打印供调试*/
+						/* Debug print */
 						for(int i=0;i<=(*len);i++){
 							Serial.print(buffer[i]);
 							Serial.print(' ');
@@ -575,7 +571,7 @@ static bool receive_frame(uint8_t* buffer, uint16_t* len) {
 					return false;
 				}
 
-				//接收下一包数据的帧头，获取下一包数据的长度、切片ID等信息，为下一包数据的接收做准备
+				// Receive next packet header for length/slice info
 				if(i < part_num){
 
 					delay_ms(100);
@@ -586,8 +582,8 @@ static bool receive_frame(uint8_t* buffer, uint16_t* len) {
 						return false;
 					}
 
-					/*验证下一包数据分片ID、总分片数*/
-					//下一包数据的分片ID与本包不连续，说明发生丢包，直接退出
+					/* Verify next packet fragment ID and total fragments */
+					// Fragment ID not consecutive, packet lost - exit
 					if(( (part_ID + 1) != part_ID_temp ) || (part_num_temp != part_num) ){
 						Serial.println(part_ID);
 						Serial.println(part_ID_temp);
@@ -597,7 +593,7 @@ static bool receive_frame(uint8_t* buffer, uint16_t* len) {
 						part_ID += 1;
 					}
 
-					/*数据防溢出处理，避免越界写入*/
+					/* Overflow protection to prevent out-of-bounds write */
 					if((buffer_index + data_len + 1) > data_len_max ){
 						Serial.println(F("Insufficient buffer space"));
 						return false;
@@ -615,7 +611,7 @@ static bool receive_frame(uint8_t* buffer, uint16_t* len) {
 }
 
 /**
- * @brief 计算数据的异或校验和
+ * @brief Calculate XOR checksum of data
  */
 static uint8_t calculate_checksum(const uint8_t* data, uint16_t len) {
     uint8_t checksum = 0;

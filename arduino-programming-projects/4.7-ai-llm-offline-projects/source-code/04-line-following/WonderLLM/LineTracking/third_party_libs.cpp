@@ -1,4 +1,4 @@
-// 将第三方库源文件聚合进编译，位于工程根目录以确保被 Arduino 构建系统编译。
+// Aggregate third-party library source files for compilation, placed in project root for Arduino build system.
 
 #include "lib/adafruit/Adafruit_BusIO_Register.cpp"
 #include "lib/adafruit/Adafruit_GenericDevice.cpp"
