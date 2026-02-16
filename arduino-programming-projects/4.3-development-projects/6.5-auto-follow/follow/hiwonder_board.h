@@ -4,9 +4,7 @@
 #include "global.h"
 #include "SensorQMI8658.hpp"
 #include "MadgwickAHRS.h"
-#include "esp_adc_cal.h"
 #include "driver/ledc.h"
-#include "driver/adc.h"
 
 #define MINIHEXA_V1_1
 
@@ -17,11 +15,7 @@
 
 #define BAT_DEC_ADDR    0x46
 #define BAT_READ_REG    0
-#define DEFAULT_VREF    1100              // Default 1.1V reference voltage
-#define NO_OF_SAMPLES   64                // ADC sampling count
-#define ADC_WIDTH       ADC_WIDTH_BIT_12   // ADC 12-bit width
-#define ADC_ATTEN       ADC_ATTEN_DB_11   // 6dB attenuator
-#define ADC_PIN         ADC1_CHANNEL_5    // ADC pin
+#define BAT_ADC_PIN     33                // Battery ADC pin (GPIO33 = ADC1_CH5)
 #define WINDOW_SIZE     8  // Filter window size
 #define R21             100000
 #define R22             10000
@@ -103,7 +97,6 @@ class HW_Board {
     TimerHandle_t imu_timer;
     TimerHandle_t buzzer_timer;
     TimerHandle_t bat_monitor_timer;
-    esp_adc_cal_characteristics_t *adc_chars = NULL;
     
     bool buzzer_on_state = false;
     bool imu_on_state = false;

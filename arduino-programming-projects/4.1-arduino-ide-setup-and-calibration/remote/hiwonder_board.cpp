@@ -26,7 +26,6 @@ static void bat_monitior_update_callback(TimerHandle_t xTimer) {
 
 void HW_Board::begin() {
   uint8_t count;
-  int raw;
   int samples_voltage;
   
   Wire.setPins(SDA, SCL);
@@ -44,17 +43,15 @@ void HW_Board::begin() {
                     NULL, 
                     buzzer_callback);
 
-  adc1_config_channel_atten(ADC_PIN, ADC_ATTEN);
-  adc_chars = (esp_adc_cal_characteristics_t *) malloc(sizeof(esp_adc_cal_characteristics_t));
-  esp_adc_cal_value_t val_type = esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN, ADC_WIDTH, DEFAULT_VREF, adc_chars);
+  analogReadResolution(12);
+  analogSetPinAttenuation(BAT_ADC_PIN, ADC_11db);
   bat_monitor_timer = xTimerCreate("bat_monitor_timer", 
                     pdMS_TO_TICKS(bat_monitor_update_interval), 
                     pdTRUE, 
                     this, 
                     bat_monitior_update_callback);  
   for(uint8_t i = 0; i < 50; i++) {
-    raw = adc1_get_raw(ADC_PIN);
-    samples_voltage = esp_adc_cal_raw_to_voltage(raw, adc_chars);
+    samples_voltage = analogReadMilliVolts(BAT_ADC_PIN);
     samples_voltage = ((R21 + R22) / R22) * samples_voltage;
     if(abs(last_sample_voltage - samples_voltage) < 500 && abs(samples_voltage - 7400) < 1500) {
       count++;
@@ -203,14 +200,12 @@ int HW_Board::get_sound_val() {
 }
 
 void HW_Board::bat_voltage_update() {
-  int raw;
   uint16_t bat;
   uint16_t samples_voltage;
   uint32_t sum = 0;
 
   if(version == V1_1) {
-    raw = adc1_get_raw(ADC_PIN);
-    samples_voltage = esp_adc_cal_raw_to_voltage(raw, adc_chars);
+    samples_voltage = analogReadMilliVolts(BAT_ADC_PIN);
     samples_voltage = ((R21 + R22) / R22) * samples_voltage;
     // Insert into sliding window
     voltage_buffer[voltage_index] = samples_voltage;
