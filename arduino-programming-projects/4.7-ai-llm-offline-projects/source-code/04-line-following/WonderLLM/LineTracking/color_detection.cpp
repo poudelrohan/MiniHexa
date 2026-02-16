@@ -179,7 +179,7 @@ static void drawColorBoxes(uint16_t *imageBuffer, size_t width, size_t height,
     // Draw segment2 boxes (middle section)
     for (int i = 0; i < COLOR_NUM; i++) {
         if (segment2[i].width > 0 && segment2[i].length > 0) {
-            // Calculate coordinates in full image（需要加上segment1的高度偏移）
+            // Calculate coordinates in full image (add segment1 height offset)
             int x = segment2[i].center_x - segment2[i].width / 2;
             int y = segment2[i].center_y - segment2[i].length / 2 + (height / 3);
             
