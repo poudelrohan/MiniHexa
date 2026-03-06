@@ -1,376 +1,707 @@
-// course_run.ino
-// IEEE SoutheastCon 2026 - Phase 1 Course Navigation
+// ============================================================
+
+// CRATER LAP TEST PROGRAM — 5 orbit strategies
+
 //
-// Route: Start → forward to Antenna #1 → right turn → forward into crater →
-//        orbit antenna #3 → exit crater → go to wall → left turn → back to start
+
+// The crater is ~1 foot radius (30cm), sloped walls,
+
+// antenna in the center. Robot must lap 360 degrees inside.
+
 //
-// ALL distances, speeds, and timing are tunable variables at the top.
-// Adjust them after testing on the real board.
+
+// Set TEST_TO_RUN to pick which strategy to test:
+
+// 0 = Run ALL tests in sequence (5s pause between each)
+
+// 1 = Dead-reckoning square
+
+// 2 = Dead-reckoning hexagon
+
+// 3 = Crab-walk circle (strafe + rotate simultaneously)
+
+// 4 = Face-antenna ultrasonic orbit (most robust)
+
+// 5 = IMU-tracked hexagon (smart dead-reckoning)
+
+// ============================================================
+
+
 
 #include "hiwonder_robot.h"
 
-// ============================================================
-//  TUNABLE PARAMETERS — CHANGE THESE TO CALIBRATE
-// ============================================================
 
-// --- General ---
-const int   STARTUP_DELAY_MS     = 10000;  // delay after upload before robot moves
-const int   PAUSE_BETWEEN_MS     = 1500;   // pause between steps (ms)
-
-// --- Forward walking ---
-const float WALK_SPEED           = 2.0f;   // vy for normal forward walking
-const float WALK_SPEED_SLOW      = 1.2f;   // vy for slow/careful walking (crater)
-const int   WALK_GAIT_MS         = 600;    // gait cycle period for walking (ms)
-
-// --- Turning ---
-const int   TURN_90_STEPS        = 4;      // gait cycles for 90-degree turn (CALIBRATE!)
-const int   TURN_180_STEPS       = 8;      // gait cycles for 180-degree turn (2x 90)
-const int   TURN_GAIT_MS         = 1000;   // gait cycle period for turning (ms)
-const float TURN_OMEGA_RIGHT     = -1.8f;  // CW turn speed (negative = right)
-const float TURN_OMEGA_LEFT      = 1.8f;   // CCW turn speed (positive = left)
-
-// --- Step 1: Walk forward to Antenna #1 ---
-const int   ANTENNA1_STOP_DIST   = 150;    // stop this far from antenna #1 (mm)
-const int   WALK_TIMEOUT_MS      = 20000;  // max time to walk before giving up (ms)
-
-// --- Step 3: Walk forward toward crater ---
-const int   CRATER_STOP_DIST     = 200;    // stop when ultrasonic reads this (mm) — crater edge
-const int   CRATER_APPROACH_TIMEOUT = 15000;
-
-// --- Step 4: Descend into crater ---
-const int   ORBIT_TARGET_DIST    = 150;    // target distance from antenna during orbit (mm)
-const int   ORBIT_CLOSE_DIST     = 120;    // too close — turn away
-const int   ORBIT_FAR_DIST       = 180;    // too far — turn toward
-const int   DESCENT_STEPS        = 4;      // gait cycles to walk into crater
-
-// --- Step 5: Orbit around antenna ---
-const float ORBIT_WALK_SPEED     = 1.5f;   // forward speed during orbit
-const int   ORBIT_GAIT_MS        = 800;    // gait cycle during orbit
-const float ORBIT_YAW_ADJUST     = 0.3f;   // yaw correction per reading (degrees)
-const float ORBIT_MAX_YAW        = 15.0f;  // max yaw during orbit (clamped)
-const unsigned long ORBIT_DURATION_MS = 25000; // max orbit time (one lap ~20-25 sec)
-const int   ORBIT_POLL_MS        = 100;    // sensor poll interval during orbit
-
-// --- Step 7: Exit crater ---
-const float CRATER_EXIT_HEIGHT   = 2.5f;   // raise body z (cm) for crater exit
-const int   CRATER_EXIT_STEPS    = 6;      // gait cycles to walk out of crater
-
-// --- Step 8: Walk to west wall ---
-const int   WALL_STOP_DIST       = 150;    // stop this far from wall (mm)
-const int   WALL_APPROACH_TIMEOUT = 15000;
-
-// --- Step 10: Walk back to start ---
-const int   START_WALL_STOP_DIST = 120;    // stop this far from south wall (mm)
-const int   RETURN_TIMEOUT_MS    = 20000;
-
-// ============================================================
-//  GLOBALS
-// ============================================================
 
 Robot minihexa;
 
+
+
+// ==========================================
+
+// WHICH TEST TO RUN (0=ALL, 1-5=specific)
+
+// ==========================================
+
+const int TEST_TO_RUN = 3;
+
+
+
+// ==========================================
+
+// SHARED PARAMETERS
+
+// ==========================================
+
+const int GAIT_MS = 600; // Base gait period (ms per step cycle)
+
+const float WALK_SPEED = 2.0f; // Forward walking speed
+
+const float STRAFE_SPEED = 2.0f; // Sideways walking speed
+
+const int PAUSE_BETWEEN = 5000; // Pause between tests (ms)
+
+
+
+// ==========================================
+
+// TEST 1: DEAD-RECKONING SQUARE
+
+// Walk 4 sides, turn 90 left between each
+
+// Circumference = 4 * side ≈ 188cm → side ≈ 47cm
+
+// ==========================================
+
+const int SQ_SIDE_STEPS = 2; // Steps per side (tune for ~47cm)
+
+const int SQ_TURN_STEPS = 4; // Steps to turn 90 degrees
+
+const float SQ_TURN_SPEED = 1.8f; // Turn omega for 90 degrees
+
+
+
+// ==========================================
+
+// TEST 2: DEAD-RECKONING HEXAGON
+
+// Walk 6 sides, turn 60 left between each
+
+// Side ≈ radius ≈ 30cm
+
+// ==========================================
+
+const int HEX_SIDE_STEPS = 3; // Steps per side (tune for ~30cm)
+
+const int HEX_TURN_STEPS = 3; // Steps to turn 60 degrees
+
+const float HEX_TURN_SPEED = 1.5f; // Turn omega for 60 degrees
+
+
+
+// ==========================================
+
+// TEST 3: CRAB-WALK CIRCLE
+
+// Strafe left + rotate CCW simultaneously
+
+// The vx/omega ratio sets the orbit radius
+
+// ==========================================
+
+const float CRAB_VX = -1.5f; // Strafe left (negative = left)
+
+const float CRAB_OMEGA = 0.8f; // Rotate CCW (positive = left)
+
+const int CRAB_GAIT_MS = 700; // Gait period for crab walk
+
+const int CRAB_TOTAL_MS = 15000; // Total duration to complete 360
+
+
+
+// ==========================================
+
+// TEST 4: FACE-ANTENNA ULTRASONIC ORBIT
+
+// Face the antenna, strafe left, maintain distance
+
+// with ultrasonic feedback. Track yaw via IMU.
+
+// ==========================================
+
+const int US_TARGET_DIST = 250; // Target distance to antenna (mm)
+
+const int US_TOLERANCE = 50; // Dead band (mm) — no correction needed
+
+const float US_STRAFE_SPEED = -1.5f; // Strafe left speed
+
+const float US_CORRECT_SPEED = 0.5f; // Forward/backward correction speed
+
+const int US_GAIT_MS = 600; // Gait period
+
+const float US_YAW_TARGET = 360.0f;// Stop after this much total rotation
+
+
+
+// ==========================================
+
+// TEST 5: IMU-TRACKED HEXAGON
+
+// Like test 2 but verifies each turn with IMU
+
+// ==========================================
+
+const int IMU_SIDE_STEPS = 3; // Steps per side
+
+const float IMU_TURN_TARGET = 60.0f; // Degrees per turn
+
+const float IMU_TURN_TOLERANCE = 5.0f; // Acceptable error (degrees)
+
+const float IMU_TURN_SPEED = 1.2f; // Slower turn for accuracy
+
+const int IMU_TURN_GAIT_MS = 800; // Gait period during IMU turns
+
+const int IMU_MAX_TURN_MS = 5000; // Safety timeout per turn
+
+
+
+// ==========================================
+
+// MOTION STRUCTS
+
+// ==========================================
+
 Velocity_t vel = {0.0f, 0.0f, 0.0f};
-Vector_t   pos = {0.0f, 0.0f, 0.0f};
-Euler_t    att = {0.0f, 0.0f, 0.0f};
 
-uint8_t step = 0;
-bool course_done = false;
+Vector_t pos = {0.0f, 0.0f, 0.0f};
 
-// ============================================================
-//  HELPERS
-// ============================================================
+Euler_t att = {0.0f, 0.0f, 0.0f};
+
+
+
+// ==========================================
+
+// HELPER FUNCTIONS
+
+// ==========================================
+
+
 
 void stop_robot() {
-    vel = {0.0f, 0.0f, 0.0f};
-    pos = {0.0f, 0.0f, 0.0f};
-    att = {0.0f, 0.0f, 0.0f};
-    minihexa.move(&vel, &pos, &att);
-    delay(500);
+
+vel = {0.0f, 0.0f, 0.0f};
+
+minihexa.move(&vel, &pos, &att, 600);
+
+delay(1000);
+
 }
 
-void pause() {
-    stop_robot();
-    delay(PAUSE_BETWEEN_MS);
+
+
+void walk_forward(int steps) {
+
+vel = {0.0f, WALK_SPEED, 0.0f};
+
+minihexa.move(&vel, &pos, &att, GAIT_MS, steps);
+
+delay((steps * GAIT_MS) + 500);
+
+stop_robot();
+
 }
 
-void log_step(uint8_t num, const char* description) {
-    Serial.printf("\n>>> Step %d: %s\n", num, description);
+
+
+void turn_left(float omega, int steps, int gait_ms) {
+
+vel = {0.0f, 0.0f, omega};
+
+minihexa.move(&vel, &pos, &att, gait_ms, steps);
+
+delay((steps * gait_ms) + 500);
+
+stop_robot();
+
 }
 
-// Walk forward continuously until ultrasonic reads <= stop_dist, or timeout
-// Returns true if obstacle detected, false if timed out
-bool walk_until_obstacle(float speed, int stop_dist, unsigned long timeout) {
-    vel = {0.0f, speed, 0.0f};
-    pos = {0.0f, 0.0f, 0.0f};
-    att = {0.0f, 0.0f, 0.0f};
-    minihexa.move(&vel, &pos, &att, WALK_GAIT_MS);
 
-    unsigned long start = millis();
-    while (millis() - start < timeout) {
-        uint16_t dis = minihexa.sensor.get_distance();
-        Serial.printf("  Walking... dist=%d mm (stop at %d)\n", dis, stop_dist);
-        if (dis > 0 && dis <= stop_dist) {
-            Serial.printf("  Obstacle detected at %d mm. Stopping.\n", dis);
-            stop_robot();
-            return true;
-        }
-        delay(100);
-    }
-    Serial.println("  Timeout reached. Stopping.");
-    stop_robot();
-    return false;
+
+void strafe_left(float speed, int steps) {
+
+vel = {-speed, 0.0f, 0.0f};
+
+minihexa.move(&vel, &pos, &att, GAIT_MS, steps);
+
+delay((steps * GAIT_MS) + 500);
+
+stop_robot();
+
 }
 
-// Turn right by N steps (blocking)
-void turn_right(int steps) {
-    vel = {0.0f, 0.0f, TURN_OMEGA_RIGHT};
-    pos = {0.0f, 0.0f, 0.0f};
-    att = {0.0f, 0.0f, 0.0f};
-    minihexa.move(&vel, &pos, &att, TURN_GAIT_MS, steps);
-    delay(steps * TURN_GAIT_MS + 200);
-    stop_robot();
+
+
+float read_yaw() {
+
+float euler[3];
+
+minihexa.board.get_imu_euler(euler);
+
+return euler[2]; // yaw in degrees
+
 }
 
-// Turn left by N steps (blocking)
-void turn_left(int steps) {
-    vel = {0.0f, 0.0f, TURN_OMEGA_LEFT};
-    pos = {0.0f, 0.0f, 0.0f};
-    att = {0.0f, 0.0f, 0.0f};
-    minihexa.move(&vel, &pos, &att, TURN_GAIT_MS, steps);
-    delay(steps * TURN_GAIT_MS + 200);
-    stop_robot();
+
+
+// Normalize angle difference to -180..+180
+
+float angle_diff(float current, float start) {
+
+float diff = current - start;
+
+while (diff > 180.0f) diff -= 360.0f;
+
+while (diff < -180.0f) diff += 360.0f;
+
+return diff;
+
 }
 
-// Walk forward N steps (blocking)
-void walk_forward(int steps, float speed, int gait_ms) {
-    vel = {0.0f, speed, 0.0f};
-    pos = {0.0f, 0.0f, 0.0f};
-    att = {0.0f, 0.0f, 0.0f};
-    minihexa.move(&vel, &pos, &att, gait_ms, steps);
-    delay(steps * gait_ms + 200);
-    stop_robot();
+
+
+// ==========================================
+
+// TEST 1: DEAD-RECKONING SQUARE
+
+// ==========================================
+
+void test_square() {
+
+Serial.println("=== TEST 1: Dead-Reckoning Square ===");
+
+
+
+for (int side = 0; side < 4; side++) {
+
+Serial.printf(" Side %d: walking %d steps\n", side + 1, SQ_SIDE_STEPS);
+
+walk_forward(SQ_SIDE_STEPS);
+
+
+
+Serial.printf(" Turning 90 left (%d steps, omega=%.1f)\n", SQ_TURN_STEPS, SQ_TURN_SPEED);
+
+turn_left(SQ_TURN_SPEED, SQ_TURN_STEPS, 1000);
+
 }
 
-// Walk forward with raised body height (for crater exit)
-void walk_forward_raised(int steps, float speed, int gait_ms, float height) {
-    vel = {0.0f, speed, 0.0f};
-    pos = {0.0f, 0.0f, height};
-    att = {0.0f, 0.0f, 0.0f};
-    minihexa.move(&vel, &pos, &att, gait_ms, steps);
-    delay(steps * gait_ms + 200);
-    stop_robot();
+
+
+Serial.println("=== TEST 1 COMPLETE ===");
+
 }
 
-// ============================================================
-//  ORBIT: Walk around antenna maintaining ultrasonic distance
-// ============================================================
 
-void orbit_antenna() {
-    Serial.println("  Starting orbit. Maintaining distance from antenna...");
-    Serial.printf("  Target: %d mm, Close: %d mm, Far: %d mm\n",
-                  ORBIT_TARGET_DIST, ORBIT_CLOSE_DIST, ORBIT_FAR_DIST);
 
-    float current_yaw = 0.0f;
-    unsigned long start = millis();
+// ==========================================
 
-    // Start walking forward
-    vel = {0.0f, ORBIT_WALK_SPEED, 0.0f};
-    pos = {0.0f, 0.0f, 0.0f};
-    att = {0.0f, 0.0f, 0.0f};
-    minihexa.move(&vel, &pos, &att, ORBIT_GAIT_MS);
+// TEST 2: DEAD-RECKONING HEXAGON
 
-    while (millis() - start < ORBIT_DURATION_MS) {
-        uint16_t dis = minihexa.sensor.get_distance();
+// ==========================================
 
-        if (dis > 0 && dis < ORBIT_CLOSE_DIST) {
-            // Too close to antenna — yaw away (turn left/outward)
-            current_yaw += ORBIT_YAW_ADJUST;
-        } else if (dis > ORBIT_FAR_DIST) {
-            // Too far from antenna — yaw toward (turn right/inward)
-            current_yaw -= ORBIT_YAW_ADJUST;
-        }
-        // else: in the sweet spot, keep current yaw
+void test_hexagon() {
 
-        // Clamp yaw
-        if (current_yaw > ORBIT_MAX_YAW) current_yaw = ORBIT_MAX_YAW;
-        if (current_yaw < -ORBIT_MAX_YAW) current_yaw = -ORBIT_MAX_YAW;
+Serial.println("=== TEST 2: Dead-Reckoning Hexagon ===");
 
-        // Apply yaw correction while continuing to walk forward
-        vel = {0.0f, ORBIT_WALK_SPEED, 0.0f};
-        att = {0.0f, 0.0f, current_yaw};
-        minihexa.move(&vel, &pos, &att, ORBIT_GAIT_MS);
 
-        Serial.printf("  Orbit: dist=%d mm, yaw=%.1f deg, elapsed=%lu ms\n",
-                      dis, current_yaw, millis() - start);
 
-        delay(ORBIT_POLL_MS);
-    }
+for (int side = 0; side < 6; side++) {
 
-    Serial.println("  Orbit complete (duration reached).");
-    stop_robot();
+Serial.printf(" Side %d: walking %d steps\n", side + 1, HEX_SIDE_STEPS);
+
+walk_forward(HEX_SIDE_STEPS);
+
+
+
+Serial.printf(" Turning 60 left (%d steps, omega=%.1f)\n", HEX_TURN_STEPS, HEX_TURN_SPEED);
+
+turn_left(HEX_TURN_SPEED, HEX_TURN_STEPS, 1000);
+
 }
 
-// ============================================================
-//  SETUP
-// ============================================================
+
+
+Serial.println("=== TEST 2 COMPLETE ===");
+
+}
+
+
+
+// ==========================================
+
+// TEST 3: CRAB-WALK CIRCLE
+
+// Strafe left + rotate CCW simultaneously
+
+// ==========================================
+
+void test_crab_circle() {
+
+Serial.println("=== TEST 3: Crab-Walk Circle ===");
+
+Serial.printf(" vx=%.1f, omega=%.1f, duration=%dms\n", CRAB_VX, CRAB_OMEGA, CRAB_TOTAL_MS);
+
+
+
+// Start continuous crab-walk motion
+
+vel = {CRAB_VX, 0.0f, CRAB_OMEGA};
+
+minihexa.move(&vel, &pos, &att, CRAB_GAIT_MS, -1); // -1 = continuous
+
+
+
+// Let it run for the specified duration
+
+delay(CRAB_TOTAL_MS);
+
+
+
+// Stop
+
+stop_robot();
+
+Serial.println("=== TEST 3 COMPLETE ===");
+
+}
+
+
+
+// ==========================================
+
+// TEST 4: FACE-ANTENNA ULTRASONIC ORBIT
+
+// Face antenna, strafe left, maintain distance
+
+// with ultrasonic. Track yaw for 360 completion.
+
+// ==========================================
+
+void test_ultrasonic_orbit() {
+
+Serial.println("=== TEST 4: Face-Antenna Ultrasonic Orbit ===");
+
+Serial.printf(" Target dist=%dmm, tolerance=%dmm\n", US_TARGET_DIST, US_TOLERANCE);
+
+
+
+float start_yaw = read_yaw();
+
+float accumulated_rotation = 0.0f;
+
+float prev_yaw = start_yaw;
+
+unsigned long start_time = millis();
+
+unsigned long max_time = 60000; // 60s safety timeout
+
+
+
+Serial.printf(" Start yaw=%.1f\n", start_yaw);
+
+
+
+while (accumulated_rotation < US_YAW_TARGET) {
+
+// Safety timeout
+
+if (millis() - start_time > max_time) {
+
+Serial.println(" TIMEOUT — stopping");
+
+break;
+
+}
+
+
+
+// Read sensors
+
+uint16_t dist = minihexa.sensor.get_distance();
+
+float current_yaw = read_yaw();
+
+
+
+// Track accumulated rotation (CCW = positive yaw change)
+
+float delta_yaw = angle_diff(current_yaw, prev_yaw);
+
+// We're going CCW (left), so positive delta = progress
+
+if (delta_yaw > 0) {
+
+accumulated_rotation += delta_yaw;
+
+}
+
+// Small negative deltas are noise, large negative = went wrong way
+
+else if (delta_yaw < -10.0f) {
+
+// Went the wrong way significantly — still count it as absolute
+
+accumulated_rotation += fabsf(delta_yaw);
+
+}
+
+prev_yaw = current_yaw;
+
+
+
+// Compute correction
+
+float vy_correct = 0.0f;
+
+if (dist < US_TARGET_DIST - US_TOLERANCE) {
+
+vy_correct = -US_CORRECT_SPEED; // Too close — back away
+
+} else if (dist > US_TARGET_DIST + US_TOLERANCE) {
+
+vy_correct = US_CORRECT_SPEED; // Too far — move closer
+
+}
+
+
+
+// Apply motion: strafe left + distance correction
+
+vel = {US_STRAFE_SPEED, vy_correct, 0.0f};
+
+minihexa.move(&vel, &pos, &att, US_GAIT_MS, 1); // 1 step at a time
+
+delay(US_GAIT_MS + 200);
+
+
+
+Serial.printf(" dist=%dmm yaw=%.1f accum=%.1f vy_corr=%.1f\n",
+
+dist, current_yaw, accumulated_rotation, vy_correct);
+
+}
+
+
+
+stop_robot();
+
+Serial.printf(" Total rotation: %.1f degrees\n", accumulated_rotation);
+
+Serial.println("=== TEST 4 COMPLETE ===");
+
+}
+
+
+
+// ==========================================
+
+// TEST 5: IMU-TRACKED HEXAGON
+
+// Hexagon with IMU-verified 60-degree turns
+
+// ==========================================
+
+void imu_turn_left(float target_degrees) {
+
+float start_yaw = read_yaw();
+
+float accumulated = 0.0f;
+
+float prev_yaw = start_yaw;
+
+unsigned long start_time = millis();
+
+
+
+Serial.printf(" IMU turn: target=%.0f, start_yaw=%.1f\n", target_degrees, start_yaw);
+
+
+
+// Start turning
+
+vel = {0.0f, 0.0f, IMU_TURN_SPEED};
+
+minihexa.move(&vel, &pos, &att, IMU_TURN_GAIT_MS, -1); // continuous
+
+
+
+while (accumulated < target_degrees - IMU_TURN_TOLERANCE) {
+
+// Safety timeout
+
+if (millis() - start_time > IMU_MAX_TURN_MS) {
+
+Serial.printf(" Turn timeout at %.1f degrees\n", accumulated);
+
+break;
+
+}
+
+
+
+delay(50); // Small polling interval
+
+
+
+float current_yaw = read_yaw();
+
+float delta = angle_diff(current_yaw, prev_yaw);
+
+if (delta > 0) {
+
+accumulated += delta;
+
+}
+
+prev_yaw = current_yaw;
+
+}
+
+
+
+stop_robot();
+
+Serial.printf(" Turn result: %.1f degrees (target: %.0f)\n", accumulated, target_degrees);
+
+}
+
+
+
+void test_imu_hexagon() {
+
+Serial.println("=== TEST 5: IMU-Tracked Hexagon ===");
+
+
+
+for (int side = 0; side < 6; side++) {
+
+Serial.printf(" Side %d: walking %d steps\n", side + 1, IMU_SIDE_STEPS);
+
+walk_forward(IMU_SIDE_STEPS);
+
+
+
+Serial.printf(" IMU-guided 60-degree left turn\n");
+
+imu_turn_left(IMU_TURN_TARGET);
+
+}
+
+
+
+Serial.println("=== TEST 5 COMPLETE ===");
+
+}
+
+
+
+// ==========================================
+
+// SETUP — runs selected test(s)
+
+// ==========================================
 
 void setup() {
-    Serial.begin(115200);
 
-    // Give time after upload before robot starts moving
-    Serial.println("Waiting before startup...");
-    delay(STARTUP_DELAY_MS);
+delay(10000); // 10s safety delay — disconnect USB, put on ground
 
-    minihexa.begin();
-    delay(2000);
 
-    Serial.println("============================================");
-    Serial.println("  SoutheastCon 2026 - Course Run");
-    Serial.println("============================================");
-    Serial.printf("  Walk speed: %.1f, Slow: %.1f\n", WALK_SPEED, WALK_SPEED_SLOW);
-    Serial.printf("  Turn 90: %d steps, Turn 180: %d steps\n", TURN_90_STEPS, TURN_180_STEPS);
-    Serial.printf("  Antenna stop: %d mm, Crater stop: %d mm\n", ANTENNA1_STOP_DIST, CRATER_STOP_DIST);
-    Serial.printf("  Orbit target: %d mm, duration: %lu ms\n", ORBIT_TARGET_DIST, ORBIT_DURATION_MS);
-    Serial.println("============================================\n");
+
+Serial.begin(115200);
+
+minihexa.begin();
+
+
+
+// Enable IMU for yaw tracking
+
+minihexa.board.imu_update(true);
+
+
+
+delay(3000); // Let robot stand up and IMU stabilize
+
+Serial.println("Crater Lap Test Program starting...");
+
+Serial.printf("TEST_TO_RUN = %d\n", TEST_TO_RUN);
+
+
+
+// --- Test 1: Dead-Reckoning Square ---
+
+if (TEST_TO_RUN == 0 || TEST_TO_RUN == 1) {
+
+test_square();
+
+if (TEST_TO_RUN == 0) delay(PAUSE_BETWEEN);
+
 }
 
-// ============================================================
-//  LOOP — state machine for course navigation
-// ============================================================
+
+
+// --- Test 2: Dead-Reckoning Hexagon ---
+
+if (TEST_TO_RUN == 0 || TEST_TO_RUN == 2) {
+
+test_hexagon();
+
+if (TEST_TO_RUN == 0) delay(PAUSE_BETWEEN);
+
+}
+
+
+
+// --- Test 3: Crab-Walk Circle ---
+
+if (TEST_TO_RUN == 0 || TEST_TO_RUN == 3) {
+
+test_crab_circle();
+
+if (TEST_TO_RUN == 0) delay(PAUSE_BETWEEN);
+
+}
+
+
+
+// --- Test 4: Face-Antenna Ultrasonic Orbit ---
+
+if (TEST_TO_RUN == 0 || TEST_TO_RUN == 4) {
+
+test_ultrasonic_orbit();
+
+if (TEST_TO_RUN == 0) delay(PAUSE_BETWEEN);
+
+}
+
+
+
+// --- Test 5: IMU-Tracked Hexagon ---
+
+if (TEST_TO_RUN == 0 || TEST_TO_RUN == 5) {
+
+test_imu_hexagon();
+
+}
+
+
+
+Serial.println("All selected tests complete!");
+
+}
+
+
 
 void loop() {
-    if (course_done) return;
 
-    switch (step) {
+// Nothing — one-shot test program
 
-        // --------------------------------------------------------
-        //  STEP 0: Leave starting area — walk forward toward Antenna #1
-        // --------------------------------------------------------
-        case 0:
-            log_step(0, "Walk FORWARD toward Antenna #1 (ultrasonic stop)");
-            walk_until_obstacle(WALK_SPEED, ANTENNA1_STOP_DIST, WALK_TIMEOUT_MS);
-            pause();
-            step++;
-            break;
-
-        // --------------------------------------------------------
-        //  STEP 1: Turn RIGHT 90 degrees (now facing east toward crater)
-        // --------------------------------------------------------
-        case 1:
-            log_step(1, "Turn RIGHT 90 degrees");
-            turn_right(TURN_90_STEPS);
-            pause();
-            step++;
-            break;
-
-        // --------------------------------------------------------
-        //  STEP 2: Walk toward crater (ultrasonic detects antenna #3)
-        // --------------------------------------------------------
-        case 2:
-            log_step(2, "Walk FORWARD toward crater (ultrasonic stop)");
-            walk_until_obstacle(WALK_SPEED, CRATER_STOP_DIST, CRATER_APPROACH_TIMEOUT);
-            pause();
-            step++;
-            break;
-
-        // --------------------------------------------------------
-        //  STEP 3: Descend into crater slowly
-        // --------------------------------------------------------
-        case 3:
-            log_step(3, "Descend into crater (slow walk forward)");
-            walk_forward(DESCENT_STEPS, WALK_SPEED_SLOW, WALK_GAIT_MS);
-            pause();
-            step++;
-            break;
-
-        // --------------------------------------------------------
-        //  STEP 4: Orbit antenna #3 — one full lap
-        // --------------------------------------------------------
-        case 4:
-            log_step(4, "Orbit Antenna #3 (ultrasonic distance hold)");
-            orbit_antenna();
-            pause();
-            step++;
-            break;
-
-        // --------------------------------------------------------
-        //  STEP 5: After orbit — check facing direction
-        //  If facing antenna (close reading), do 180. Otherwise skip.
-        // --------------------------------------------------------
-        case 5: {
-            log_step(5, "Check direction after orbit");
-            uint16_t dis = minihexa.sensor.get_distance();
-            Serial.printf("  Post-orbit distance: %d mm\n", dis);
-
-            if (dis > 0 && dis < ORBIT_FAR_DIST) {
-                // Facing antenna — turn 180 to face outward
-                Serial.println("  Facing antenna. Turning 180 degrees.");
-                turn_right(TURN_180_STEPS);
-            } else {
-                Serial.println("  Already facing outward. No turn needed.");
-            }
-            pause();
-            step++;
-            break;
-        }
-
-        // --------------------------------------------------------
-        //  STEP 6: Raise body and walk OUT of crater
-        // --------------------------------------------------------
-        case 6:
-            log_step(6, "Raise body and walk OUT of crater");
-            Serial.printf("  Raising body to z=%.1f cm\n", CRATER_EXIT_HEIGHT);
-            walk_forward_raised(CRATER_EXIT_STEPS, WALK_SPEED_SLOW, WALK_GAIT_MS, CRATER_EXIT_HEIGHT);
-
-            // Lower body back to normal
-            pos = {0.0f, 0.0f, 0.0f};
-            minihexa.move(&vel, &pos, &att, 600);
-            delay(800);
-            pause();
-            step++;
-            break;
-
-        // --------------------------------------------------------
-        //  STEP 7: Walk toward WEST wall (ultrasonic stop)
-        // --------------------------------------------------------
-        case 7:
-            log_step(7, "Walk toward WEST wall (ultrasonic stop)");
-            walk_until_obstacle(WALK_SPEED, WALL_STOP_DIST, WALL_APPROACH_TIMEOUT);
-            pause();
-            step++;
-            break;
-
-        // --------------------------------------------------------
-        //  STEP 8: Turn LEFT 90 degrees (now facing south toward start)
-        // --------------------------------------------------------
-        case 8:
-            log_step(8, "Turn LEFT 90 degrees (face south toward start)");
-            turn_left(TURN_90_STEPS);
-            pause();
-            step++;
-            break;
-
-        // --------------------------------------------------------
-        //  STEP 9: Walk back to starting area (ultrasonic stop at wall)
-        // --------------------------------------------------------
-        case 9:
-            log_step(9, "Walk SOUTH back to starting area (ultrasonic stop)");
-            walk_until_obstacle(WALK_SPEED, START_WALL_STOP_DIST, RETURN_TIMEOUT_MS);
-            pause();
-            step++;
-            break;
-
-        // --------------------------------------------------------
-        //  STEP 10: Done!
-        // --------------------------------------------------------
-        case 10:
-            Serial.println("\n============================================");
-            Serial.println("  COURSE RUN COMPLETE!");
-            Serial.println("  Robot should be back in starting area.");
-            Serial.println("============================================");
-            Serial.printf("  Battery: %d mV\n", minihexa.board.bat_voltage);
-            minihexa.reset();
-            course_done = true;
-            break;
-    }
 }

@@ -20,21 +20,21 @@ void loop() {
     memcpy(rgb2, rgb1, sizeof(rgb1));
     minihexa.sensor.set_ultrasound_rgb(1, rgb1, rgb2);
   }
-  else if (dis > 80 && dis <= 180){   // Red gradient
+  else if (dis > 80 && dis <= 150){   // Red gradient
     s = map(dis,80,180,0,255);
     rgb1[0] = 255-s;
     rgb1[1] = 0;
     rgb1[2] = 0;
     memcpy(rgb2, rgb1, sizeof(rgb1));
   }
-  else if (dis > 180 && dis <= 320){              // Blue gradient
+  else if (dis > 150 && dis <= 300){              // Blue gradient
     s = map(dis,180,320,0,255);
     rgb1[0] = 0;
     rgb1[1] = 0;
     rgb1[2] = s;   
     memcpy(rgb2, rgb1, sizeof(rgb1)); 
   }
-  else if (dis > 320 && dis <= 500){     // Green gradient
+  else if (dis > 300 && dis <= 450){     // Green gradient
     s = map(dis,320,500,0,255);
     rgb1[0] = 0;
     rgb1[1] = s;
